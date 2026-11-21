@@ -289,7 +289,15 @@ void CALLBACK OnEvent(HWINEVENTHOOK, DWORD ev, HWND h, LONG obj, LONG, DWORD, DW
             auto tl = g_tiled.find(h);
             bool ours = !GetPropW(h, L"MacJanela") && tl != g_tiled.end() && g_before.count(h) &&
                         g_start.right - g_start.left == tl->second.right - tl->second.left && g_start.bottom - g_start.top == tl->second.bottom - tl->second.top;
-            g_maxDrag = IsZoomed(h) || ours || (!GetPropW(h, L"MacJanela") && FillsWork(h));
+            // a DLL cuida só das que ela mesma ampliou (MacJanelaAmpliada); o resto é aqui
+            bool dllZoom = GetPropW(h, L"MacJanelaAmpliada") != nullptr;
+            bool fills = FillsWork(h);
+            g_maxDrag = !dllZoom && (IsZoomed(h) || ours || fills);
+            RECT wr, vis = Visible(h, wr);
+            wchar_t cls[64] = {}; GetClassNameW(h, cls, 64);
+            Log(L"encaixe: arrasto começou (%ls) zoomed=%d nossa=%d preenche=%d dll=%d/%d visível=%ld,%ld,%ld,%ld -> %ls",
+                cls, IsZoomed(h) ? 1 : 0, ours ? 1 : 0, fills ? 1 : 0, GetPropW(h, L"MacJanela") ? 1 : 0, dllZoom ? 1 : 0,
+                vis.left, vis.top, vis.right, vis.bottom, g_maxDrag ? L"volta ao tamanho normal ao andar" : L"arrasto comum");
         }
         Hide();
         g_timer = SetTimer(nullptr, 0, 15, TimerProc);
