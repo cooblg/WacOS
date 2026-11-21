@@ -24,8 +24,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: WacOS-bin
-          path: |
-            bin/WacOSShell.exe
-            bin/WacOSSettings.exe
-            bin/WacOSFinder.exe
-            bin/WacOSQuickTime.exe
+          path: bin/*.exe
