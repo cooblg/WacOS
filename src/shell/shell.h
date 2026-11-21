@@ -556,6 +556,7 @@ void Detach(HWND h);  // a janela vai ser destruída: solta o vidro dela
 void Restart();       // refaz o vidro real do zero (Ajustes: "Reiniciar o Liquid Glass")
 void Set(HWND h, float w, float hgt, float radius, D2D1_COLOR_F tint);  // px
 void Fade(HWND h, float opacity, float scale, float cx, float cy);     // animação: opacidade e escala em volta de (cx, cy) px
+void FadeOutAnim(HWND h, int ms);    // some em ms pela Composição (não depende desta thread)
 // Conteúdo desenhado DENTRO do vidro (mesma árvore da Composição): vidro e desenho chegam à tela no mesmo
 // quadro. Numa janela à parte (swap chain), a borda do vidro ficava um quadro atrás do desenho quando o
 // painel mudava de tamanho. Coordenadas em DIP (scale = DPI/96); o contexto é do dispositivo de ui::Gpu()

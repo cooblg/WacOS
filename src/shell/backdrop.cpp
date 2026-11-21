@@ -41,6 +41,7 @@
 #include <atomic>
 #include <random>
 #include <map>
+#include <chrono>
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -1536,6 +1537,20 @@ void backdrop::Fade(HWND h, float opacity, float scale, float cx, float cy) {
     e.root.Opacity(std::clamp(opacity, 0.f, 1.f));
     e.root.CenterPoint({ cx, cy, 0 });
     e.root.Scale({ scale, scale, 1 });
+}
+
+// some sozinho na Composição (o DWM anima): vale mesmo que esta thread fique ocupada (a ação escolhida no menu)
+void backdrop::FadeOutAnim(HWND h, int ms) {
+    auto it = g_entries.find(h);
+    if (it == g_entries.end()) return;
+    try {
+        auto a = g_comp.CreateScalarKeyFrameAnimation();
+        a.InsertKeyFrame(1.f, 0.f, g_comp.CreateCubicBezierEasingFunction({ 0.3f, 0.f }, { 0.6f, 1.f }));
+        a.Duration(std::chrono::milliseconds(std::max(1, ms)));
+        it->second.root.StartAnimation(L"Opacity", a);
+    } catch (...) {
+        it->second.root.Opacity(0);
+    }
 }
 
 void backdrop::Set(HWND h, float w, float hgt, float radius, D2D1_COLOR_F tint) {
