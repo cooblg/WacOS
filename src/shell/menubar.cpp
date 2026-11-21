@@ -1323,6 +1323,11 @@ const UINT WM_BARDISPLAYS = WM_APP + 41;  // monitores mudaram: refaz as barras 
 // vibrância, borda que refrata e brilho). Sem ela a barra do Tahoe não tem fundo nenhum, e em papel de parede
 // cheio de detalhe as letras sumiam (pedido de 22/11/2026).
 std::map<HWND, HWND> g_vidro;  // barra -> janela de vidro atrás dela
+// o último lugar/tinta passados ao vidro de cada barra: o relógio chama SyncVidro a cada segundo e, sem mudança, não se
+// mexe em nada (antes: SetWindowPos + backdrop::Set a cada segundo, e cada SetWindowPos fazia o vidro real refazer a
+// lista de janelas e remontar o fundo inteiro; o Set igual ainda redesenhava a peça)
+struct VidroUlt { RECT r{}; bool white = false, ok = false; };
+std::map<HWND, VidroUlt> g_vidroUlt;
 bool GlassBarOn() { return backdrop::Liquid() && !liquid::Leopard() && shell::Setting(L"barra_vidro", L"0") == L"1"; }
 LRESULT CALLBACK VidroProc(HWND h, UINT m, WPARAM w, LPARAM l) {
     if (m == WM_MOUSEACTIVATE) return MA_NOACTIVATE;
@@ -1333,7 +1338,11 @@ LRESULT CALLBACK VidroProc(HWND h, UINT m, WPARAM w, LPARAM l) {
 void SyncVidro(HWND bar) {
     auto it = g_vidro.find(bar);
     HWND v = it != g_vidro.end() ? it->second : nullptr;
-    if (!GlassBarOn() || !IsWindow(bar) || !IsWindowVisible(bar)) { if (v) ShowWindow(v, SW_HIDE); return; }
+    if (!GlassBarOn() || !IsWindow(bar) || !IsWindowVisible(bar)) {
+        if (v && IsWindowVisible(v)) ShowWindow(v, SW_HIDE);
+        g_vidroUlt[bar].ok = false;
+        return;
+    }
     if (!v) {
         if (it != g_vidro.end()) return;  // já falhou nesta barra
         static bool reg;
@@ -1351,19 +1360,24 @@ void SyncVidro(HWND bar) {
     }
     RECT r; GetWindowRect(bar, &r);
     const int w = r.right - r.left, h = r.bottom - r.top;
-    if (w <= 0 || h <= 0) { ShowWindow(v, SW_HIDE); return; }
-    // logo atrás da barra (o vidro não passa por cima de nada além dela)
-    SetWindowPos(v, bar, r.left, r.top, w, h, SWP_NOACTIVATE | SWP_SHOWWINDOW);
+    if (w <= 0 || h <= 0) { ShowWindow(v, SW_HIDE); g_vidroUlt[bar].ok = false; return; }
     // tinta pela cor do texto (que segue o papel de parede): letras pretas -> vidro claro; brancas -> vidro escuro
     bool white = WallpaperTopDark(ui::Dark());
+    VidroUlt& u = g_vidroUlt[bar];
+    const bool same = u.ok && EqualRect(&u.r, &r) && u.white == white && IsWindowVisible(v);
+    // logo atrás da barra (o vidro não passa por cima de nada além dela); só se mudou ou se algo entrou entre os dois
+    if (!same || GetWindow(bar, GW_HWNDNEXT) != v) SetWindowPos(v, bar, r.left, r.top, w, h, SWP_NOACTIVATE | SWP_SHOWWINDOW);
+    if (same) return;
     D2D1_COLOR_F tint = white ? D2D1::ColorF(0.12f, 0.12f, 0.13f, 0.26f) : D2D1::ColorF(0.98f, 0.98f, 0.99f, 0.34f);
     backdrop::Set(v, (float)w, (float)h, 0.f, tint);
+    u.r = r; u.white = white; u.ok = true;
 }
 void DropVidro(HWND bar) {
     auto it = g_vidro.find(bar);
     if (it == g_vidro.end()) return;
     if (it->second) { backdrop::Detach(it->second); DestroyWindow(it->second); }
     g_vidro.erase(it);
+    g_vidroUlt.erase(bar);
 }
 
 LRESULT CALLBACK BarProc(HWND h, UINT m, WPARAM w, LPARAM l) {
