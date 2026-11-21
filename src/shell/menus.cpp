@@ -805,13 +805,13 @@ void CALLBACK MvTick(HWND, UINT, UINT_PTR, DWORD) {
         HWND menu = it->first; MenuVidro& v = it->second;
         // o menu sumiu sem avisar (app fechou, travou): o vidro vai junto. Logo depois de abrir ele ainda não apareceu.
         bool gone = !IsWindow(menu) || (!IsWindowVisible(menu) && now - v.born > 600);
-        if (!gone && v.fadeT0) {
-            float p = (now - v.fadeT0) / (float)std::max(1, v.fadeMs);
-            if (p >= 1) gone = true;
-            else backdrop::Fade(v.back, 1 - p * p * (3 - 2 * p), 1, v.w / 2.f, v.h / 2.f);  // acompanha o fade do menu
-        }
-        if (gone) { MvFree(v); it = g_mv.erase(it); }
-        else ++it;
+        if (!gone && v.fadeT0 && now - v.fadeT0 > (DWORD)v.fadeMs + 40) gone = true;  // o fade (da Composição) acabou
+        if (gone) { MvFree(v); it = g_mv.erase(it); continue; }
+        // sempre logo atrás do menu: se algo (o Dock subindo, outro "sempre por cima") passou entre os dois ou por cima
+        // do vidro, o vidro cobria o texto e só ele ficava na tela
+        if (!v.fadeT0 && GetWindow(menu, GW_HWNDNEXT) != v.back)
+            SetWindowPos(v.back, menu, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
+        ++it;
     }
     if (g_mv.empty() && g_mvTimer) { KillTimer(nullptr, g_mvTimer); g_mvTimer = 0; }
 }
@@ -830,10 +830,17 @@ bool menus::VidroMsg(UINT m, WPARAM w, LPARAM l, LRESULT* res) {
     auto it = g_mv.find(menu);
     if (code == 0) { if (it != g_mv.end()) { MvFree(it->second); g_mv.erase(it); } return true; }
     if (code == 2) {
-        if (it != g_mv.end() && !it->second.fadeT0) { it->second.fadeT0 = GetTickCount() | 1; it->second.fadeMs = (int)((p >> 28) & 0xFFF); }
+        if (it != g_mv.end() && !it->second.fadeT0) {
+            it->second.fadeT0 = GetTickCount() | 1;
+            it->second.fadeMs = (int)((p >> 28) & 0xFFF);
+            backdrop::FadeOutAnim(it->second.back, it->second.fadeMs);  // junto com o fade do menu, também na Composição
+        }
         return true;
     }
     if (code != 1 || !MenuGlassOn()) return true;
+    // o menu pede antes de aparecer; já visível = o pedido chegou atrasado (o menu desistiu de esperar e ficou com o
+    // vidro dele): sem vidro nosso, senão ele ficava sozinho na tela quando o menu sumisse
+    if (IsWindowVisible(menu)) return true;
     if (it != g_mv.end()) { MvFree(it->second); g_mv.erase(it); }
     MenuVidro v;
     v.dark = (p & 4) != 0;
