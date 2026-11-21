@@ -180,20 +180,35 @@ void Apply(HWND h, int kind, RECT t, RECT start) {
     g_tiled[h] = now;
 }
 
+// a janela ocupa a área de trabalho inteira (preenchida): o retângulo visível bate com ela (folga de 12 px)
+bool FillsWork(HWND h) {
+    RECT wr, vis = Visible(h, wr);
+    MONITORINFO mi{ sizeof(mi) };
+    if (!GetMonitorInfoW(MonitorFromWindow(h, MONITOR_DEFAULTTONEAREST), &mi)) return false;
+    const RECT& w = mi.rcWork;
+    return std::abs(vis.left - w.left) <= 12 && std::abs(vis.top - w.top) <= 12 && std::abs(vis.right - w.right) <= 12 && std::abs(vis.bottom - w.bottom) <= 12;
+}
+
 // a janela maximizada volta ao tamanho normal debaixo do ponteiro e o arrasto recomeça com ela
 void UnmaximizeUnderCursor(HWND h) {
     POINT c; GetCursorPos(&c);
     RECT max; GetWindowRect(h, &max);
-    if (!IsZoomed(h)) {  // preenchida/encaixada por nós (não maximizada): volta ao retângulo de antes
-        auto b = g_before.find(h);
-        if (b == g_before.end()) return;
+    if (!IsZoomed(h)) {  // preenchida (por nós, por outra sessão do Shell ou pelo app): volta a um tamanho normal
         MONITORINFO mi{ sizeof(mi) };
         GetMonitorInfoW(MonitorFromWindow(h, MONITOR_DEFAULTTONEAREST), &mi);
-        int w = b->second.right - b->second.left, hh = b->second.bottom - b->second.top;
+        const int ww = mi.rcWork.right - mi.rcWork.left, wh = mi.rcWork.bottom - mi.rcWork.top;
+        int w = 0, hh = 0;
+        auto b = g_before.find(h);
+        if (b != g_before.end()) { w = b->second.right - b->second.left; hh = b->second.bottom - b->second.top; g_before.erase(b); }
+        if (w <= 0 || hh <= 0 || (w >= ww * 9 / 10 && hh >= wh * 9 / 10)) {  // sem o "antes": o normal guardado pelo Windows
+            WINDOWPLACEMENT wp{ sizeof(wp) };
+            if (GetWindowPlacement(h, &wp)) { w = wp.rcNormalPosition.right - wp.rcNormalPosition.left; hh = wp.rcNormalPosition.bottom - wp.rcNormalPosition.top; }
+        }
+        if (w <= 0 || hh <= 0 || (w >= ww * 9 / 10 && hh >= wh * 9 / 10)) { w = ww * 7 / 10; hh = wh * 7 / 10; }  // nem isso: 70 % da tela
         float fx = (g_press.x - max.left) / (float)std::max<LONG>(max.right - max.left, 1);
         int left = std::clamp<int>(c.x - (int)(fx * w), mi.rcWork.left - w + 80, mi.rcWork.right - 80);
         int top = std::max<int>((int)mi.rcWork.top, c.y - std::min<int>(std::max<int>(g_press.y - max.top, 8), 40));
-        g_before.erase(b); g_tiled.erase(h);
+        g_tiled.erase(h);
         g_ignoreEnd = h;
         SendMessageTimeoutW(h, WM_CANCELMODE, 0, 0, SMTO_ABORTIFHUNG, 200, nullptr);
         SetWindowPos(h, nullptr, left, top, w, hh, SWP_NOZORDER | SWP_NOACTIVATE);
@@ -274,7 +289,7 @@ void CALLBACK OnEvent(HWINEVENTHOOK, DWORD ev, HWND h, LONG obj, LONG, DWORD, DW
             auto tl = g_tiled.find(h);
             bool ours = !GetPropW(h, L"MacJanela") && tl != g_tiled.end() && g_before.count(h) &&
                         g_start.right - g_start.left == tl->second.right - tl->second.left && g_start.bottom - g_start.top == tl->second.bottom - tl->second.top;
-            g_maxDrag = IsZoomed(h) || ours;
+            g_maxDrag = IsZoomed(h) || ours || (!GetPropW(h, L"MacJanela") && FillsWork(h));
         }
         Hide();
         g_timer = SetTimer(nullptr, 0, 15, TimerProc);
