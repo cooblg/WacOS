@@ -5,7 +5,7 @@ name: build
 
 on:
   push:
-    branches: [main]
+    branches: [main, fork-build]
   workflow_dispatch:
 
 jobs:
@@ -19,3 +19,11 @@ jobs:
         run: |
           call build.cmd || exit /b 1
           call build.cmd janelas || exit /b 1
+
+      - name: Upload (fork)
+        uses: actions/upload-artifact@v4
+        with:
+          name: WacOS-bin
+          path: |
+            bin/WacOSShell.exe
+            bin/WacOSSettings.exe
