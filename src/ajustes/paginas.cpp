@@ -1463,7 +1463,13 @@ Page CentralControle() {
                      [] { return Setting(L"barra_icones_todos", L"0") == L"1" ? 2 : Setting(L"barra_seta", L"0") == L"1" ? 1 : 0; },
                      [](int i) { SetSetting(L"barra_icones_todos", i == 2 ? L"1" : L"0"); SetSetting(L"barra_seta", i == 1 ? L"1" : L"0"); });
     tray.icon = 0xE71D; tray.iconColor = C_GRAY;
-    p.groups.push_back(G({ tray }, L"Barra de Menus", L"Ícones que os aplicativos põem na área de notificação do Windows."));
+    // o vidro da barra também aqui, à vista (antes só em Aparência > Transparência e Efeitos); o mesmo barra_vidro
+    Row barGlass = Toggle(L"Barra de menus de vidro (Liquid Glass)", [] { return Setting(L"barra_vidro", L"0") == L"1"; },
+                          [](bool v) { SetSetting(L"barra_vidro", v ? L"1" : L"0"); },
+                          L"O vidro do Dock atrás da barra de menus: as letras ficam legíveis em qualquer papel de parede.");
+    barGlass.icon = 0xE790; barGlass.iconColor = C_BLUE;
+    barGlass.enabled = Setting(L"liquid_glass", L"0") == L"1" && Setting(L"reduzir_transparencia", L"0") != L"1" && Setting(L"leopard", L"0") != L"1";
+    p.groups.push_back(G({ tray, barGlass }, L"Barra de Menus", L"Ícones que os aplicativos põem na área de notificação do Windows."));
     Row clock = Popup(L"Relógio", { L"Dia, data e hora", L"Só a hora" }, [] { return Setting(L"relogio_curto", L"0") == L"1" ? 1 : 0; },
                       [](int i) { SetSetting(L"relogio_curto", i == 1 ? L"1" : L"0"); });
     clock.icon = 0xE787; clock.iconColor = C_GRAY;
