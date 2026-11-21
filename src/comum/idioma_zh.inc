@@ -473,6 +473,8 @@
 { L"Mostrar fundo da barra de menus", L"显示菜单栏背景" },
 { L"Barra de menus de vidro (Liquid Glass)", L"玻璃菜单栏 (Liquid Glass)" },
 { L"O vidro do Dock atrás da barra de menus: as letras ficam legíveis em qualquer papel de parede.", L"在菜单栏后面使用与程序坞相同的玻璃，任何墙纸上文字都清晰可读。" },
+{ L"Menus de vidro (Liquid Glass)", L"玻璃菜单 (Liquid Glass)" },
+{ L"Os menus (clique direito, barra de menus e Dock) ficam com o vidro claro do Dock, com refração na borda.", L"菜单（右键、菜单栏和程序坞）使用与程序坞相同的透明玻璃，边缘有折射。" },
 { L"Desligado, a barra fica sem fundo, só com o papel de parede atrás (como no Tahoe).", L"关闭后，菜单栏没有背景，后面只显示墙纸（与 Tahoe 一样）。" },
 { L"Transparência", L"透明度" },
 { L"Efeito gênio ao minimizar", L"最小化时使用神奇效果" },

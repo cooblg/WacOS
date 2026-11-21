@@ -473,6 +473,8 @@
 { L"Mostrar fundo da barra de menus", L"Afficher l’arrière-plan de la barre des menus" },
 { L"Barra de menus de vidro (Liquid Glass)", L"Barre des menus en verre (Liquid Glass)" },
 { L"O vidro do Dock atrás da barra de menus: as letras ficam legíveis em qualquer papel de parede.", L"Le verre du Dock derrière la barre des menus : le texte reste lisible sur tout fond d’écran." },
+{ L"Menus de vidro (Liquid Glass)", L"Menus en verre (Liquid Glass)" },
+{ L"Os menus (clique direito, barra de menus e Dock) ficam com o vidro claro do Dock, com refração na borda.", L"Les menus (clic droit, barre des menus et Dock) prennent le verre clair du Dock, avec réfraction sur le bord." },
 { L"Desligado, a barra fica sem fundo, só com o papel de parede atrás (como no Tahoe).", L"Désactivé, la barre n’a pas d’arrière-plan, seulement le fond d’écran derrière (comme dans Tahoe)." },
 { L"Transparência", L"Transparence" },
 { L"Efeito gênio ao minimizar", L"Effet Génie lors du placement dans le Dock" },

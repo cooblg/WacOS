@@ -1433,11 +1433,16 @@ Page TransparenciaEfeitos() {
                           [](bool v) { SetSetting(L"barra_vidro", v ? L"1" : L"0"); },
                           L"O vidro do Dock atrás da barra de menus: as letras ficam legíveis em qualquer papel de parede.");
     barGlass.enabled = !reduce && liquid;
+    // menus (de contexto, da barra de menus e os do Windows) com o vidro do Dock em vez do vidro tingido (menu_vidro)
+    Row menuGlass = Toggle(L"Menus de vidro (Liquid Glass)", [] { return Setting(L"menu_vidro", L"0") == L"1"; },
+                           [](bool v) { SetSetting(L"menu_vidro", v ? L"1" : L"0"); },
+                           L"Os menus (clique direito, barra de menus e Dock) ficam com o vidro claro do Dock, com refração na borda.");
+    menuGlass.enabled = !reduce && liquid;
     // macOS 26: "Permitir tingir janelas com o papel de parede" (a barra lateral dos apps pega a cor dele)
     Row wtint = Toggle(L"Permitir tingir janelas com o papel de parede", [] { return Setting(L"tingir_janelas", L"1") != L"0"; },
                        [](bool v) { SetSetting(L"tingir_janelas", v ? L"1" : L"0"); },
                        L"A barra lateral dos apps (Lembretes, Calendário, Contatos, Fotos, Música) ganha um pouco da cor do papel de parede. Vale ao abrir o app de novo.");
-    p.groups.push_back(G({ red, tint, bar, barGlass, wtint }, L"Transparência"));
+    p.groups.push_back(G({ red, tint, bar, barGlass, menuGlass, wtint }, L"Transparência"));
 
     Row genie = Toggle(L"Efeito gênio ao minimizar", [] { return Setting(L"genio", L"1") == L"1"; },
                        [](bool v) { SetSetting(L"genio", v ? L"1" : L"0"); });

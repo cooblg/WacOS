@@ -913,6 +913,7 @@ static LRESULT CALLBACK MsgProc(HWND h, UINT m, WPARAM w, LPARAM l) {
         return 0;
     }
     if (atualizacao::Handle(m)) return 0;
+    if (LRESULT mr; menus::VidroMsg(m, w, l, &mr)) return mr;  // menu de contexto de um app nosso pedindo o vidro
     // Ajustes > Aparência > "Reiniciar o Liquid Glass": refaz o vidro real do zero (se ele desistiu ou travou)
     static UINT redoGlass = RegisterWindowMessageW(L"ShellReiniciarVidro");
     if (m == redoGlass && redoGlass) { backdrop::Restart(); return 1; }
@@ -1248,6 +1249,8 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE, PWSTR, int) {
     RegisterClassW(&mc);
     g_msg = CreateWindowExW(WS_EX_TOOLWINDOW, mc.lpszClassName, L"", WS_POPUP, 0, 0, 0, 0, nullptr, nullptr, hi, nullptr);
     apps::ours.push_back(g_msg);
+    // os menus de contexto dos apps (Finder...) pedem o vidro mesmo com o Shell como administrador
+    ChangeWindowMessageFilterEx(g_msg, RegisterWindowMessageW(L"WacOSMenuVidro"), MSGFLT_ALLOW, nullptr);
     atualizacao::Start(g_msg);  // aviso de versão nova no GitHub (90 s depois e a cada 6 h)
     boot::Progress(0.2f);
 
@@ -1350,6 +1353,7 @@ int shell::RodarNativo(HINSTANCE hi, const std::wstring& dirBin, const std::wstr
     RegisterClassW(&mc);
     g_msg = CreateWindowExW(WS_EX_TOOLWINDOW, mc.lpszClassName, L"", WS_POPUP, 0, 0, 0, 0, nullptr, nullptr, hi, nullptr);
     apps::ours.push_back(g_msg);
+    ChangeWindowMessageFilterEx(g_msg, RegisterWindowMessageW(L"WacOSMenuVidro"), MSGFLT_ALLOW, nullptr);
     atualizacao::Start(g_msg);  // aviso de versão nova no GitHub (90 s depois e a cada 6 h)
 
     if (!menubar::Create(hi) || !dock::Create(hi) || !launchpad::Create(hi) || !missioncontrol::Create(hi) || !central::Create(hi) || !spotlight::Create(hi) || !alertas::Create(hi) || !sobre::Create(hi) || !seletor::Create(hi) || !som::Create(hi)) { Log(L"erro criando as janelas"); Restore(); return 1; }
