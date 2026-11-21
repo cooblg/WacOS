@@ -459,12 +459,31 @@ void indice::Start() {
     std::thread([] {
         SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL);
         Index ix;
+        // idade do arquivo salvo: o Shell reiniciado há pouco (atualização, ajustes, ícones) não precisa reler os discos
+        ULONGLONG ageMin = ~0ull;
+        {
+            WIN32_FILE_ATTRIBUTE_DATA fa{};
+            if (GetFileAttributesExW(g_file.c_str(), GetFileExInfoStandard, &fa)) {
+                FILETIME nowFt; GetSystemTimeAsFileTime(&nowFt);
+                ULARGE_INTEGER a{ { fa.ftLastWriteTime.dwLowDateTime, fa.ftLastWriteTime.dwHighDateTime } }, b{ { nowFt.dwLowDateTime, nowFt.dwHighDateTime } };
+                if (b.QuadPart >= a.QuadPart) ageMin = (b.QuadPart - a.QuadPart) / (10000000ull * 60);
+            }
+        }
         bool loaded = Load(ix);
         if (loaded) {
             size_t n = ix.nodes.size();
             { std::unique_lock<std::shared_mutex> l(g_mx); g_idx = std::move(ix); }
             g_ready = true;
             Log(L"índice: %zu itens lidos do disco", n);
+            // Salvo há menos de 20 min (o Shell acabou de reiniciar): sem a varredura completa da abertura. Ela relia
+            // todos os discos a cada reinício (2,7 milhões de itens: ~11 s de CPU, o dobro da memória do índice enquanto
+            // montava e 140 MB gravados de novo), e o Shell reinicia várias vezes seguidas ao mexer nos ajustes. O que
+            // mudou nesses segundos com o Shell fechado entra quando a pasta mudar de novo ou na próxima varredura.
+            if (ageMin < 20) {
+                Log(L"índice: salvo há %llu min, sem varredura na abertura", ageMin);
+                Watcher();
+                return;
+            }
             // com o índice salvo a busca já funciona: a varredura nova espera o login assentar (antes: corria
             // junto com o boot por ~3 minutos, disputando disco com o Windows e os apps)
             Sleep(GetTickCount64() < 10 * 60 * 1000 ? 4 * 60 * 1000 : 30 * 1000);
