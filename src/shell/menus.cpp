@@ -865,7 +865,7 @@ bool menus::VidroMsg(UINT m, WPARAM w, LPARAM l, LRESULT* res) {
     backdrop::SetPieces(v.back, (float)v.w, (float)v.h, pcs, ClearMenuTint(v.dark), 4.f);
     SetWindowPos(v.back, menu, r.left, r.top, v.w, v.h, SWP_NOACTIVATE | SWP_SHOWWINDOW);  // logo atrás do menu
     g_mv[menu] = v;
-    if (!g_mvTimer) g_mvTimer = SetTimer(nullptr, 0, 16, MvTick);
+    if (!g_mvTimer) g_mvTimer = SetTimer(nullptr, 0, 50, MvTick);  // o fade é da Composição: aqui só faxina e a ordem
     *res = 1;
     return true;
 }
