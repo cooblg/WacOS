@@ -16,6 +16,7 @@
 #include <atomic>
 #include <mutex>
 #include <thread>
+#include <map>
 
 namespace {
 
@@ -50,6 +51,12 @@ struct Level {
     float scroll = 0;        // quanto já rolou (DIPs)
     float scale = 1;
 };
+
+// Ajustes > Transparência e Efeitos > "Menus de vidro (Liquid Glass)" (menu_vidro=1): os menus ficam com o vidro claro do
+// Dock (pouco fosco, refração na borda) em vez do vidro "regular" bem tingido. Vale para estes menus (#32768) e para os
+// menus de contexto dos nossos apps (Finder, mesa, Dock...: menu/context_menu.cpp), que pedem o vidro ao Shell.
+bool MenuGlassOn() { return backdrop::Liquid() && shell::Setting(L"menu_vidro", L"0") == L"1"; }
+D2D1_COLOR_F ClearMenuTint(bool dark) { return dark ? D2D1::ColorF(0.10f, 0.10f, 0.11f, 0.24f) : D2D1::ColorF(0.98f, 0.98f, 0.99f, 0.30f); }
 
 std::vector<Level*> g_levels;
 HWINEVENTHOOK g_menuHook, g_focusHook, g_createHook;
@@ -195,7 +202,8 @@ void Paint(Level& l) {
     if (!rt) return;
     bool dark = ui::Dark();
     ID2D1SolidColorBrush* br = nullptr;
-    rt->CreateSolidColorBrush(dark ? D2D1::ColorF(0.16f, 0.16f, 0.17f, 0.40f) : D2D1::ColorF(0.97f, 0.97f, 0.97f, 0.45f), &br);
+    const bool clear = l.glass && MenuGlassOn();  // vidro do Dock: a tinta fica quase toda no vidro
+    rt->CreateSolidColorBrush(dark ? D2D1::ColorF(0.16f, 0.16f, 0.17f, clear ? 0.22f : 0.40f) : D2D1::ColorF(0.97f, 0.97f, 0.97f, clear ? 0.24f : 0.45f), &br);
     rt->FillRectangle(D2D1::RectF(0, 0, l.w, l.view), br);
     bool up = UpArrow(l), down = DownArrow(l);
     D2D1_MATRIX_3X2_F base; rt->GetTransform(&base);
@@ -573,8 +581,9 @@ void OpenLevel(HWND native, HMENU menu, RECT nr) {
         // bem fosco e com tinta firme, como os menus de contexto: o texto não pode disputar com o que está atrás
         // (a "Transparência do vidro" no mínimo deixava o menu quase nítido)
         std::vector<backdrop::Piece> pcs{ { D2D1::RectF(0, 0, (float)wpx, (float)hpx), MENU_R * l->scale } };
-        backdrop::SetPieces(l->back, (float)wpx, (float)hpx, pcs,
-                            ui::Dark() ? D2D1::ColorF(0.13f, 0.13f, 0.14f, 0.62f) : D2D1::ColorF(0.97f, 0.97f, 0.98f, 0.66f), 18.f);
+        if (MenuGlassOn()) backdrop::SetPieces(l->back, (float)wpx, (float)hpx, pcs, ClearMenuTint(ui::Dark()), 4.f);
+        else backdrop::SetPieces(l->back, (float)wpx, (float)hpx, pcs,
+                                 ui::Dark() ? D2D1::ColorF(0.13f, 0.13f, 0.14f, 0.62f) : D2D1::ColorF(0.97f, 0.97f, 0.98f, 0.66f), 18.f);
     }
     l->wnd = CreateWindowExW(WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_NOREDIRECTIONBITMAP, L"ShellMenuMac", L"", WS_POPUP,
                              x, y, wpx, hpx, nullptr, nullptr, shell::inst, nullptr);
@@ -765,7 +774,90 @@ LRESULT CALLBACK HostProc(HWND h, UINT m, WPARAM w, LPARAM l) {
     return DefWindowProcW(h, m, w, l);
 }
 
+// ---- Vidro atrás dos menus de contexto dos nossos apps (menu/context_menu.cpp, em qualquer processo)
+// O menu (janela "MenuTahoePopup") manda "WacOSMenuVidro" com wParam = a janela dele e lParam =
+//   bits 0-1 o pedido (1 abriu, 2 começou a sumir, 0 fechou), bit 2 escuro, bits 4-15 a margem da sombra (px),
+//   bits 16-27 o raio do canto (px), bits 28-39 a duração do fade (ms).
+// Respondemos 1 quando o vidro está atrás dele: aí o menu tira o desfoque próprio e fica só com uma tinta leve.
+struct MenuVidro { HWND back = nullptr; int margin = 0, radius = 0, w = 0, h = 0; bool dark = false; DWORD born = 0, fadeT0 = 0; int fadeMs = 160; };
+std::map<HWND, MenuVidro> g_mv;
+UINT_PTR g_mvTimer;
+
+LRESULT CALLBACK MvProc(HWND h, UINT m, WPARAM w, LPARAM l) {
+    if (m == WM_MOUSEACTIVATE) return MA_NOACTIVATE;
+    if (m == WM_NCHITTEST) return HTTRANSPARENT;
+    if (m == WM_PAINT) { PAINTSTRUCT ps; BeginPaint(h, &ps); EndPaint(h, &ps); return 0; }
+    return DefWindowProcW(h, m, w, l);
+}
+
+void MvFree(MenuVidro& v) {
+    if (v.back) { backdrop::Detach(v.back); DestroyWindow(v.back); }
+    v.back = nullptr;
+}
+
+void CALLBACK MvTick(HWND, UINT, UINT_PTR, DWORD) {
+    DWORD now = GetTickCount();
+    for (auto it = g_mv.begin(); it != g_mv.end();) {
+        HWND menu = it->first; MenuVidro& v = it->second;
+        // o menu sumiu sem avisar (app fechou, travou): o vidro vai junto. Logo depois de abrir ele ainda não apareceu.
+        bool gone = !IsWindow(menu) || (!IsWindowVisible(menu) && now - v.born > 600);
+        if (!gone && v.fadeT0) {
+            float p = (now - v.fadeT0) / (float)std::max(1, v.fadeMs);
+            if (p >= 1) gone = true;
+            else backdrop::Fade(v.back, 1 - p * p * (3 - 2 * p), 1, v.w / 2.f, v.h / 2.f);  // acompanha o fade do menu
+        }
+        if (gone) { MvFree(v); it = g_mv.erase(it); }
+        else ++it;
+    }
+    if (g_mv.empty() && g_mvTimer) { KillTimer(nullptr, g_mvTimer); g_mvTimer = 0; }
+}
+
 }  // namespace
+
+bool menus::VidroMsg(UINT m, WPARAM w, LPARAM l, LRESULT* res) {
+    static UINT msg = RegisterWindowMessageW(L"WacOSMenuVidro");
+    if (!msg || m != msg) return false;
+    *res = 0;
+    HWND menu = (HWND)w;
+    const ULONG_PTR p = (ULONG_PTR)l;
+    const int code = (int)(p & 3);
+    wchar_t cls[32] = {};
+    if (!IsWindow(menu) || !GetClassNameW(menu, cls, 32) || wcscmp(cls, L"MenuTahoePopup")) return true;  // só menus nossos
+    auto it = g_mv.find(menu);
+    if (code == 0) { if (it != g_mv.end()) { MvFree(it->second); g_mv.erase(it); } return true; }
+    if (code == 2) {
+        if (it != g_mv.end() && !it->second.fadeT0) { it->second.fadeT0 = GetTickCount() | 1; it->second.fadeMs = (int)((p >> 28) & 0xFFF); }
+        return true;
+    }
+    if (code != 1 || !MenuGlassOn()) return true;
+    if (it != g_mv.end()) { MvFree(it->second); g_mv.erase(it); }
+    MenuVidro v;
+    v.dark = (p & 4) != 0;
+    v.margin = (int)((p >> 4) & 0xFFF);
+    v.radius = (int)((p >> 16) & 0xFFF);
+    v.born = GetTickCount();
+    RECT r; GetWindowRect(menu, &r);
+    InflateRect(&r, -v.margin, -v.margin);
+    v.w = r.right - r.left; v.h = r.bottom - r.top;
+    if (v.w <= 0 || v.h <= 0) return true;
+    static bool reg;
+    if (!reg) { WNDCLASSW c{}; c.lpfnWndProc = MvProc; c.hInstance = shell::inst; c.lpszClassName = L"ShellMenuVidro"; RegisterClassW(&c); reg = true; }
+    v.back = CreateWindowExW(WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_TRANSPARENT | WS_EX_NOREDIRECTIONBITMAP, L"ShellMenuVidro", L"",
+                             WS_POPUP, r.left, r.top, v.w, v.h, nullptr, nullptr, shell::inst, nullptr);
+    if (!v.back || !backdrop::Attach(v.back)) {
+        if (v.back) DestroyWindow(v.back);
+        Log(L"menu de contexto: vidro indisponível");
+        return true;
+    }
+    DWORD nc = 1; DwmSetWindowAttribute(v.back, 33 /*sem o canto do DWM*/, &nc, sizeof(nc));
+    std::vector<backdrop::Piece> pcs{ { D2D1::RectF(0, 0, (float)v.w, (float)v.h), (float)v.radius } };
+    backdrop::SetPieces(v.back, (float)v.w, (float)v.h, pcs, ClearMenuTint(v.dark), 4.f);
+    SetWindowPos(v.back, menu, r.left, r.top, v.w, v.h, SWP_NOACTIVATE | SWP_SHOWWINDOW);  // logo atrás do menu
+    g_mv[menu] = v;
+    if (!g_mvTimer) g_mvTimer = SetTimer(nullptr, 0, 16, MvTick);
+    *res = 1;
+    return true;
+}
 
 void menus::Start() {
     if (shell::Setting(L"menus_do_windows", L"1") != L"1") return;

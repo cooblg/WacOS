@@ -250,6 +250,8 @@ void Key(UINT vk, bool fine);   // VK_VOLUME_UP/DOWN/MUTE (fine: Shift+Alt, quar
 namespace menus {  // menus do Windows (#32768) de todos os programas no visual do Mac (menus.cpp)
 void Start();
 void Stop();
+// "WacOSMenuVidro": um menu de contexto nosso pede o Liquid Glass atrás dele (true = a mensagem era essa; *res = resposta)
+bool VidroMsg(UINT m, WPARAM w, LPARAM l, LRESULT* res);
 }
 namespace dialogs {  // janela de Abrir/Salvar trocada pelo Finder por fora (dialogs.cpp)
 void Start();
