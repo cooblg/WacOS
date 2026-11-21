@@ -38,11 +38,16 @@ bool g_maxDrag;            // o arrasto atual começou com a janela maximizada
 POINT g_press{};           // onde o botão desceu
 HWND g_ignoreEnd;          // o fim do arrasto cancelado de propósito (não é um "soltou")
 
-bool Enabled() {
+bool WindowsSnapOn() {  // o interruptor do Windows ("Ajustar janelas")
     wchar_t v[8] = L"1"; DWORD n = sizeof(v);
     RegGetValueW(HKEY_CURRENT_USER, L"Control Panel\\Desktop", L"WindowArrangementActive", RRF_RT_REG_SZ, nullptr, v, &n);
     return v[0] != L'0';
 }
+// ajustes.txt encaixe_windows=1: o encaixe fica com o Windows (Snap: arrastar a maximizada a desmaximiza, layouts de
+// encaixe...) e o nosso não age. Pedido de 21/11/2026: com o nosso, os apps maximizados de barra própria (Chrome,
+// Discord, Photoshop) não saíam do lugar ao arrastar.
+bool UseWindowsSnap() { return shell::Setting(L"encaixe_windows", L"0") == L"1"; }
+bool Enabled() { return WindowsSnapOn() && !UseWindowsSnap(); }
 
 // o encaixe do Windows desligado só nesta sessão (sem gravar): com ele ligado, o Windows também agia na borda
 void SilenceWindows() {
@@ -390,6 +395,11 @@ void encaixe::Start() {
         if (g_prev) apps::ours.push_back(g_prev);
     }
     if (Enabled()) SilenceWindows();
+    else if (UseWindowsSnap() && WindowsSnapOn()) {  // devolve o do Windows (pode ter ficado desligado de uma sessão fechada à força)
+        BOOL cur = TRUE; SystemParametersInfoW(SPI_GETWINARRANGING, 0, &cur, 0);
+        if (!cur) SystemParametersInfoW(SPI_SETWINARRANGING, TRUE, nullptr, 0);
+        Log(L"encaixe: o do Windows (encaixe_windows=1)");
+    }
     if (!g_ev) g_ev = SetWinEventHook(EVENT_SYSTEM_MOVESIZESTART, EVENT_SYSTEM_MOVESIZEEND, nullptr, OnEvent, 0, 0, WINEVENT_OUTOFCONTEXT | shell::SemProprio());
     if (!g_mhook) g_mhook = SetWindowsHookExW(WH_MOUSE_LL, MaxMouseHook, GetModuleHandleW(nullptr), 0);
     Log(L"encaixe: ligado (encaixe do Windows %ls nesta sessão)", g_turnedOff ? L"desligado" : L"já estava desligado");
