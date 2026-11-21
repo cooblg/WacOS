@@ -29,6 +29,7 @@ static ID2D1Bitmap* StyledBitmap(ID2D1RenderTarget* rt, UINT w, UINT h, const st
 #include <thread>
 #include "../comum/idioma.h"
 #include "../menu/context_menu.h"
+#include "../comum/ime.h"
 
 namespace {
 
@@ -739,9 +740,11 @@ void CompAnimate(bool closing) {
     ui::Comp()->Commit();
 }
 
+ime::State g_ime;  // sílaba do IME em composição no fim do g_query (comum/ime.h)
 void Close() {
     if (!g_open || g_closing) return;
     g_closing = true;
+    ime::Cancel(g_wnd, g_ime);
     g_closingAt = anim::Now();
     if (g_comp) {
         ui::FrameClock(g_wnd, WM_LP_FRAME, false);
@@ -783,6 +786,13 @@ void GoPage(int p) {
 }
 
 LRESULT CALLBACK Proc(HWND h, UINT m, WPARAM w, LPARAM l) {
+    {   // IME (coreano...): a sílaba em composição direto na busca
+        LRESULT r = 0; bool changed = false;
+        if (ime::Handle(h, m, w, l, g_query, g_ime, &changed, &r)) {
+            if (changed) { { std::lock_guard<std::mutex> lk(g_mu); g_page = 0; Filter(); } g_apScroll = 0; Paint(); }
+            return r;
+        }
+    }
     if (m == WM_INITMENUPOPUP || m == WM_DRAWITEM || m == WM_MEASUREITEM || m == WM_MENUCHAR) {  // submenus das extensões
         LRESULT res = 0;
         if (ctxmenu::ForwardOwnerMsg(m, w, l, &res)) return res;
