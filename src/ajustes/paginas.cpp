@@ -1426,11 +1426,16 @@ Page TransparenciaEfeitos() {
                      [](bool v) { SetSetting(L"barra_fundo", v ? L"1" : L"0"); },
                      L"Desligado, a barra fica sem fundo, só com o papel de parede atrás (como no Tahoe).");
     bar.enabled = !reduce && !liquid;  // no Tahoe a barra nunca tem fundo, como no macOS 26
+    // no Tahoe: a barra pode ter o vidro do Dock (barra_vidro; o Shell confere a cada segundo)
+    Row barGlass = Toggle(L"Barra de menus de vidro (Liquid Glass)", [] { return Setting(L"barra_vidro", L"0") == L"1"; },
+                          [](bool v) { SetSetting(L"barra_vidro", v ? L"1" : L"0"); },
+                          L"O vidro do Dock atrás da barra de menus: as letras ficam legíveis em qualquer papel de parede.");
+    barGlass.enabled = !reduce && liquid;
     // macOS 26: "Permitir tingir janelas com o papel de parede" (a barra lateral dos apps pega a cor dele)
     Row wtint = Toggle(L"Permitir tingir janelas com o papel de parede", [] { return Setting(L"tingir_janelas", L"1") != L"0"; },
                        [](bool v) { SetSetting(L"tingir_janelas", v ? L"1" : L"0"); },
                        L"A barra lateral dos apps (Lembretes, Calendário, Contatos, Fotos, Música) ganha um pouco da cor do papel de parede. Vale ao abrir o app de novo.");
-    p.groups.push_back(G({ red, tint, bar, wtint }, L"Transparência"));
+    p.groups.push_back(G({ red, tint, bar, barGlass, wtint }, L"Transparência"));
 
     Row genie = Toggle(L"Efeito gênio ao minimizar", [] { return Setting(L"genio", L"1") == L"1"; },
                        [](bool v) { SetSetting(L"genio", v ? L"1" : L"0"); });

@@ -480,6 +480,8 @@
 { L"Transparência do vidro", L"Glass transparency" },
 { L"Opaco", L"Opaque" },
 { L"Mostrar fundo da barra de menus", L"Show menu bar background" },
+{ L"Barra de menus de vidro (Liquid Glass)", L"Glass menu bar (Liquid Glass)" },
+{ L"O vidro do Dock atrás da barra de menus: as letras ficam legíveis em qualquer papel de parede.", L"The Dock glass behind the menu bar: the letters stay readable on any wallpaper." },
 { L"Desligado, a barra fica sem fundo, só com o papel de parede atrás (como no Tahoe).", L"When off, the menu bar has no background, just the wallpaper behind it (like in Tahoe)." },
 { L"Transparência", L"Transparency" },
 { L"Efeito gênio ao minimizar", L"Genie effect when minimizing" },
