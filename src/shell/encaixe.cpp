@@ -81,8 +81,10 @@ int Target(HWND h, RECT* t) {
     return 0;
 }
 
+void OnPress(POINT pt);
 LRESULT CALLBACK PrevProc(HWND h, UINT m, WPARAM w, LPARAM l) {
     if (m == WM_NCHITTEST) return HTTRANSPARENT;
+    if (m == WM_APP + 77) { OnPress({ (short)LOWORD(l), (short)HIWORD(l) }); return 0; }  // WM_ENC_DOWN (gancho do mouse)
     return DefWindowProcW(h, m, w, l);
 }
 
@@ -190,7 +192,7 @@ bool FillsWork(HWND h) {
 }
 
 // a janela maximizada volta ao tamanho normal debaixo do ponteiro e o arrasto recomeça com ela
-void UnmaximizeUnderCursor(HWND h) {
+void UnmaximizeUnderCursor(HWND h, bool cancelLoop = true) {
     POINT c; GetCursorPos(&c);
     RECT max; GetWindowRect(h, &max);
     if (!IsZoomed(h)) {  // preenchida (por nós, por outra sessão do Shell ou pelo app): volta a um tamanho normal
@@ -209,8 +211,7 @@ void UnmaximizeUnderCursor(HWND h) {
         int left = std::clamp<int>(c.x - (int)(fx * w), mi.rcWork.left - w + 80, mi.rcWork.right - 80);
         int top = std::max<int>((int)mi.rcWork.top, c.y - std::min<int>(std::max<int>(g_press.y - max.top, 8), 40));
         g_tiled.erase(h);
-        g_ignoreEnd = h;
-        SendMessageTimeoutW(h, WM_CANCELMODE, 0, 0, SMTO_ABORTIFHUNG, 200, nullptr);
+        if (cancelLoop) { g_ignoreEnd = h; SendMessageTimeoutW(h, WM_CANCELMODE, 0, 0, SMTO_ABORTIFHUNG, 200, nullptr); }
         SetWindowPos(h, nullptr, left, top, w, hh, SWP_NOZORDER | SWP_NOACTIVATE);
         PostMessageW(h, WM_SYSCOMMAND, 0xF012, MAKELPARAM((WORD)(short)c.x, (WORD)(short)c.y));
         Log(L"encaixe: janela preenchida arrastada -> tamanho de antes %dx%d debaixo do ponteiro", w, hh);
@@ -233,12 +234,52 @@ void UnmaximizeUnderCursor(HWND h) {
     wp.rcNormalPosition = { left - dx, top - dy, left - dx + w, top - dy + hh };
     wp.showCmd = SW_SHOWNORMAL;
     wp.flags = 0;
-    g_ignoreEnd = h;
-    SendMessageTimeoutW(h, WM_CANCELMODE, 0, 0, SMTO_ABORTIFHUNG, 200, nullptr);  // sai do arrasto preso
+    if (cancelLoop) { g_ignoreEnd = h; SendMessageTimeoutW(h, WM_CANCELMODE, 0, 0, SMTO_ABORTIFHUNG, 200, nullptr); }  // sai do arrasto preso
     SetWindowPlacement(h, &wp);
     // arrasto novo pela barra (0xF012 = SC_MOVE | HTCAPTION): o botão ainda está apertado, ela segue o ponteiro
     PostMessageW(h, WM_SYSCOMMAND, 0xF012, MAKELPARAM((WORD)(short)c.x, (WORD)(short)c.y));
     Log(L"encaixe: janela maximizada arrastada -> tamanho normal %dx%d debaixo do ponteiro", w, hh);
+}
+
+// Maximizada de verdade + encaixe do Windows desligado: o Windows nem COMEÇA o arrasto (não vem o
+// EVENT_SYSTEM_MOVESIZESTART; log de 21/11/2026, Chrome). Então: um gancho de mouse só anota onde o botão desceu e
+// passa para a thread do Shell; lá, se foi na barra de uma janela maximizada e o ponteiro andou com o botão
+// apertado, ela volta ao tamanho normal debaixo do ponteiro e o arrasto começa (duplo clique continua igual).
+bool Candidate(HWND h);
+const UINT WM_ENC_DOWN = WM_APP + 77;
+HHOOK g_mhook;
+HWND g_pend;               // janela maximizada com o botão apertado na barra
+UINT_PTR g_pendTimer;
+
+void StopPending() { if (g_pendTimer) { KillTimer(nullptr, g_pendTimer); g_pendTimer = 0; } g_pend = nullptr; }
+
+void CALLBACK PendProc(HWND, UINT, UINT_PTR, DWORD) {
+    if (!g_pend || !IsWindow(g_pend) || !IsZoomed(g_pend) ||
+        !(GetAsyncKeyState(GetSystemMetrics(SM_SWAPBUTTON) ? VK_RBUTTON : VK_LBUTTON) & 0x8000)) { StopPending(); return; }
+    POINT c; GetCursorPos(&c);
+    if (std::abs(c.x - g_press.x) <= 6 && std::abs(c.y - g_press.y) <= 6) return;
+    HWND h = g_pend;
+    StopPending();
+    UnmaximizeUnderCursor(h, false);  // não há arrasto do Windows para cancelar
+}
+
+void OnPress(POINT pt) {
+    if (!Enabled() || g_drag) return;
+    HWND root = GetAncestor(WindowFromPoint(pt), GA_ROOT);
+    if (!Candidate(root) || !IsZoomed(root) || GetPropW(root, L"MacJanelaAmpliada")) return;
+    DWORD_PTR hit = 0;
+    if (!SendMessageTimeoutW(root, WM_NCHITTEST, 0, MAKELPARAM((WORD)(short)pt.x, (WORD)(short)pt.y), SMTO_ABORTIFHUNG, 60, &hit) || hit != HTCAPTION) return;
+    StopPending();
+    g_pend = root; g_press = pt;
+    g_pendTimer = SetTimer(nullptr, 0, 15, PendProc);
+}
+
+LRESULT CALLBACK MaxMouseHook(int code, WPARAM w, LPARAM l) {
+    if (code == HC_ACTION && (w == WM_LBUTTONDOWN) && g_prev) {  // só anota e passa adiante (gancho tem que ser rápido)
+        auto* m = (MSLLHOOKSTRUCT*)l;
+        if (!(m->flags & LLMHF_INJECTED)) PostMessageW(g_prev, WM_ENC_DOWN, 0, MAKELPARAM((WORD)(short)m->pt.x, (WORD)(short)m->pt.y));
+    }
+    return CallNextHookEx(nullptr, code, w, l);
 }
 
 void Tick() {
@@ -350,11 +391,14 @@ void encaixe::Start() {
     }
     if (Enabled()) SilenceWindows();
     if (!g_ev) g_ev = SetWinEventHook(EVENT_SYSTEM_MOVESIZESTART, EVENT_SYSTEM_MOVESIZEEND, nullptr, OnEvent, 0, 0, WINEVENT_OUTOFCONTEXT | shell::SemProprio());
+    if (!g_mhook) g_mhook = SetWindowsHookExW(WH_MOUSE_LL, MaxMouseHook, GetModuleHandleW(nullptr), 0);
     Log(L"encaixe: ligado (encaixe do Windows %ls nesta sessão)", g_turnedOff ? L"desligado" : L"já estava desligado");
 }
 
 void encaixe::Stop() {
     if (g_ev) { UnhookWinEvent(g_ev); g_ev = nullptr; }
+    if (g_mhook) { UnhookWindowsHookEx(g_mhook); g_mhook = nullptr; }
+    StopPending();
     if (g_timer) { KillTimer(nullptr, g_timer); g_timer = 0; }
     Hide();
     // o encaixe do Windows volta como estava (sem gravar: o registro nunca mudou)
