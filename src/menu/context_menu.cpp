@@ -403,6 +403,8 @@ struct Level {
     wuc::Desktop::DesktopWindowTarget target{ nullptr };
     wuc::ContainerVisual root{ nullptr };
     wuc::CompositionDrawingSurface contentS{ nullptr }, shadowS{ nullptr };
+    wuc::SpriteVisual backV{ nullptr };  // o desfoque do Windows atrás do desenho
+    bool ext = false;  // o Shell pôs o Liquid Glass do Dock atrás deste menu (menu_vidro=1): sem desfoque próprio
 };
 
 struct Session {
@@ -688,6 +690,7 @@ static bool SetupComp(Level& L) {
         auto content = g_wc.CreateSpriteVisual();
         content.Size({ L.mw, L.mh });
         content.Brush(g_wc.CreateSurfaceBrush(L.contentS));
+        L.backV = back;
         card.Children().InsertAtTop(back);
         card.Children().InsertAtTop(content);
         L.root.Children().InsertAtTop(shadowV);
@@ -752,6 +755,30 @@ static IDWriteTextFormat* MakeFormat(float size, DWRITE_FONT_WEIGHT w) {
 }
 
 static void DrawLevel(Session& s, int li);
+
+// ---- Liquid Glass do Shell atrás do menu (Ajustes > Transparência e Efeitos > "Menus de vidro", menu_vidro=1)
+// O vidro real (refração, o mesmo do Dock) só existe no Shell: ele põe uma janela de vidro logo atrás deste menu e o
+// menu tira o desfoque próprio, ficando só com uma tinta leve. Protocolo em shell/menus.cpp (menus::VidroMsg).
+// Sem o Shell, com a opção desligada ou sem resposta: o vidro de sempre.
+static int g_fadeMs = 160;
+static UINT VidroMsgId() { static UINT m = RegisterWindowMessageW(L"WacOSMenuVidro"); return m; }
+static LPARAM VidroParam(const Level& L, int code, bool dark) {
+    ULONG_PTR r = (ULONG_PTR)(code & 3) | (dark ? 4 : 0) | ((ULONG_PTR)(L.margin & 0xFFF) << 4) |
+                  ((ULONG_PTR)((int)lroundf(CARD_R * L.scale) & 0xFFF) << 16);
+    if (sizeof(ULONG_PTR) >= 8) r |= (ULONG_PTR)(g_fadeMs & 0xFFF) << 16 << 12;
+    return (LPARAM)r;
+}
+static bool AskShellGlass(const Level& L, bool dark) {
+    if (!L.comp || !Tahoe() || sizeof(ULONG_PTR) < 8 || !VidroMsgId()) return false;
+    HWND sh = FindWindowW(L"ShellMensagens", nullptr);
+    if (!sh) return false;
+    DWORD_PTR r = 0;
+    return SendMessageTimeoutW(sh, VidroMsgId(), (WPARAM)L.hwnd, VidroParam(L, 1, dark), SMTO_ABORTIFHUNG, 250, &r) && r == 1;
+}
+static void TellShellGlass(const Level& L, int code) {
+    if (!L.ext) return;
+    if (HWND sh = FindWindowW(L"ShellMensagens", nullptr)) PostMessageW(sh, VidroMsgId(), (WPARAM)L.hwnd, VidroParam(L, code, false));
+}
 
 // Abre um nível. Raiz: no ponteiro. Submenu: ao lado do item pai (parentWin/itemTop em pixels de tela).
 static LARGE_INTEGER g_tShow;  // início do ctxmenu::Show / ShowItems (medição)
@@ -845,6 +872,10 @@ static void OpenLevel(Session& s, std::vector<MItem>* items, POINT anchor, const
                                  WS_POPUP, x, top, w, h, s.owner, nullptr, g_inst, nullptr);
     }
     if (!L.comp) ApplyEffects(L.hwnd, s.dark);  // antes de mostrar: aplicar depois deixava o menu em branco às vezes
+    if (L.comp && AskShellGlass(L, s.dark)) {  // o vidro do Shell já está atrás: o desfoque do Windows sai
+        L.ext = true;
+        try { if (L.backV) L.backV.IsVisible(false); } catch (...) {}
+    }
     s.levels.push_back(L);
     if (L.comp) DrawLevel(s, (int)s.levels.size() - 1);  // desenha antes de aparecer
     ShowWindow(L.hwnd, SW_SHOWNOACTIVATE);
@@ -867,6 +898,7 @@ static void CloseLevelsAfter(Session& s, int li) {
         if (L.tf) L.tf->Release();
         if (L.tfHdr) L.tfHdr->Release();
         if (L.tfIcon) L.tfIcon->Release();
+        TellShellGlass(L, 0);
         DestroyWindow(L.hwnd);
         s.levels.pop_back();
     }
@@ -1039,6 +1071,8 @@ static void DrawLevel(Session& s, int li) {
     if (g_glass.alpha) bg.a = g_glass.alpha(bg.a);
     // macOS 27 Golden Gate: o menu de contexto é vidro fosco (leitoso), não o Liquid Glass transparente do Dock
     if (Golden()) { bg = dk ? D2D1::ColorF(0.17f, 0.165f, 0.165f, 0.88f) : D2D1::ColorF(0.95f, 0.945f, 0.94f, 0.84f); }
+    // Liquid Glass do Shell atrás (menu_vidro=1): a tinta forte fica no vidro, aqui só um véu para o texto
+    if (L.ext) bg = dk ? D2D1::ColorF(0.12f, 0.12f, 0.13f, 0.26f) : D2D1::ColorF(0.98f, 0.98f, 0.985f, 0.30f);
     const bool leo = Leopard();
     if (leo) bg = D2D1::ColorF(1, 1, 1, 0.94f);  // Leopard: sempre claro (o 10.5 não tinha modo escuro)
     ID2D1SolidColorBrush *text, *dim, *sep, *hdr, *accent, *white;
@@ -1179,8 +1213,6 @@ static void DrawLevel(Session& s, int li) {
 }
 
 // Animação de saída no estilo macOS: o item escolhido pisca uma vez e o menu some em fade.
-static int g_fadeMs = 160;
-
 static void Blink(Session& s) {
     for (int li = (int)s.levels.size() - 1; li >= 0; li--) {
         Level& L = s.levels[li];
@@ -1205,7 +1237,8 @@ static void FreeLevel(Level& L) {
     if (L.tf) L.tf->Release();
     if (L.tfHdr) L.tfHdr->Release();
     if (L.tfIcon) L.tfIcon->Release();
-    L.target = nullptr; L.root = nullptr; L.contentS = nullptr; L.shadowS = nullptr;
+    TellShellGlass(L, 0);
+    L.target = nullptr; L.root = nullptr; L.contentS = nullptr; L.shadowS = nullptr; L.backV = nullptr;
     if (IsWindow(L.hwnd)) DestroyWindow(L.hwnd);
 }
 
@@ -1231,6 +1264,7 @@ static bool FadeOutAsync(Session& s) {
             a.InsertKeyFrame(1.f, 0.f, g_wc.CreateCubicBezierEasingFunction({ 0.3f, 0.f }, { 0.6f, 1.f }));
             a.Duration(std::chrono::milliseconds(g_fadeMs));
             L.root.StartAnimation(L"Opacity", a);
+            TellShellGlass(L, 2);  // o vidro do Shell some junto
             SetWindowLongPtrW(L.hwnd, GWL_EXSTYLE, GetWindowLongPtrW(L.hwnd, GWL_EXSTYLE) | WS_EX_TRANSPARENT);  // cliques passam
             SetTimer(L.hwnd, T_DYING, g_fadeMs + 30, nullptr);
             g_dying.push_back(L);
@@ -1248,6 +1282,7 @@ static void FadeOut(Session& s) {
                 a.InsertKeyFrame(1.f, 0.f, g_wc.CreateCubicBezierEasingFunction({ 0.3f, 0.f }, { 0.6f, 1.f }));
                 a.Duration(std::chrono::milliseconds(g_fadeMs));
                 L.root.StartAnimation(L"Opacity", a);
+                TellShellGlass(L, 2);
             }
             PumpFor(g_fadeMs + 16);
         } catch (...) {}

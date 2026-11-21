@@ -473,6 +473,8 @@
 { L"Mostrar fundo da barra de menus", L"Pokazuj tło paska menu" },
 { L"Barra de menus de vidro (Liquid Glass)", L"Szklany pasek menu (Liquid Glass)" },
 { L"O vidro do Dock atrás da barra de menus: as letras ficam legíveis em qualquer papel de parede.", L"Szkło Docka za paskiem menu: napisy są czytelne na każdej tapecie." },
+{ L"Menus de vidro (Liquid Glass)", L"Szklane menu (Liquid Glass)" },
+{ L"Os menus (clique direito, barra de menus e Dock) ficam com o vidro claro do Dock, com refração na borda.", L"Menu (prawy przycisk, pasek menu i Dock) dostają przezroczyste szkło Docka z załamaniem światła na krawędzi." },
 { L"Desligado, a barra fica sem fundo, só com o papel de parede atrás (como no Tahoe).", L"Po wyłączeniu pasek nie ma tła, widać za nim tylko tapetę (jak w Tahoe)." },
 { L"Transparência", L"Przezroczystość" },
 { L"Efeito gênio ao minimizar", L"Efekt dżina przy minimalizowaniu" },
