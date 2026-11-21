@@ -561,7 +561,10 @@ static void SetShellAutoStart(bool on) {
     if (!on) { RunHidden(L"schtasks.exe /Delete /TN WacOS /F"); return; }
     std::wstring exe = BinDir() + L"\\WacOSShell.exe";
     // ao fazer logon, só para este usuário, sem administrador (o schtasks /SC ONLOGON pediria administrador)
-    std::wstring ps = L"$u=\"$env:USERDOMAIN\\$env:USERNAME\"; Register-ScheduledTask -TaskName WacOS -Force "
+    // sem aspas duplas dentro do -Command "...": a de "$env:USERDOMAIN\$env:USERNAME" fechava o argumento no meio, o
+    // PowerShell recebia $u=$env:USERDOMAIN\$env:USERNAME (erro de sintaxe) e a tarefa nunca era criada: a chave
+    // voltava a desligada sem aviso (22/11/2026; o mesmo Register-ScheduledTask rodado direto funcionava)
+    std::wstring ps = L"$u=$env:USERDOMAIN+'\\'+$env:USERNAME; Register-ScheduledTask -TaskName WacOS -Force "
                       L"-Action (New-ScheduledTaskAction -Execute '" + exe + L"' -WorkingDirectory '" + BinDir() + L"') "
                       L"-Trigger (New-ScheduledTaskTrigger -AtLogOn -User $u) "
                       L"-Settings (New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit ([TimeSpan]::Zero) -Priority 4 -MultipleInstances IgnoreNew) "
