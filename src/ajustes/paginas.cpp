@@ -1483,6 +1483,10 @@ Page CentralControle() {
     Row clock = Popup(L"Relógio", { L"Dia, data e hora", L"Só a hora" }, [] { return Setting(L"relogio_curto", L"0") == L"1" ? 1 : 0; },
                       [](int i) { SetSetting(L"relogio_curto", i == 1 ? L"1" : L"0"); });
     clock.icon = 0xE787; clock.iconColor = C_GRAY;
+    Row ampm = Toggle(L"Relógio de 12 horas (AM/PM)", [] { return Setting(L"relogio_12h", L"0") == L"1"; },
+                      [](bool v) { SetSetting(L"relogio_12h", v ? L"1" : L"0"); });
+    Row secs = Toggle(L"Mostrar os segundos", [] { return Setting(L"relogio_segundos", L"0") == L"1"; },
+                      [](bool v) { SetSetting(L"relogio_segundos", v ? L"1" : L"0"); });
     // Reddit (dougnite, 20/11/2026): sem barra nos monitores secundários (o topo deles volta para as janelas)
     Row todos = Toggle(L"Mostrar a barra de menus em todos os monitores", [] { return Setting(L"barra_todos_monitores", L"1") != L"0"; },
                        [](bool v) { SetSetting(L"barra_todos_monitores", v ? L"1" : L"0"); },
@@ -1498,7 +1502,7 @@ Page CentralControle() {
                        [](bool v) { SetSetting(L"barra_embaixo", v ? L"1" : L"0"); },
                        L"Os menus ficam à esquerda do Dock e os ícones e o relógio à direita. Precisa do Dock embaixo, no monitor principal; não vale no tema Leopard.");
     baixo.icon = 0xE90E; baixo.iconColor = C_GRAY;
-    p.groups.push_back(G({ clock, baixo, todos, priv }));
+    p.groups.push_back(G({ clock, ampm, secs, baixo, todos, priv }));
     return p;
 }
 
