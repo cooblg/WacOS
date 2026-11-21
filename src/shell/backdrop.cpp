@@ -768,6 +768,22 @@ bool CoveredByFullscreen(HWND piece) {
     for (HWND w = GetWindow(piece, GW_HWNDPREV); w; w = GetWindow(w, GW_HWNDPREV)) if (w == fg) { lastRes = true; break; }  // o app está acima
     return lastRes;
 }
+// Margem da montagem em volta de uma janela de vidro: o que as peças dela leem fora de si (desfoque 3σ + a lente,
+// as mesmas contas do DrawPiece), no máximo os 64 de antes. A barra de menus de vidro (fina) lia 64 px abaixo dela, e
+// qualquer mudança na faixa das abas do navegador maximizado remontava a barra inteira; agora ~30 px (22/11/2026).
+LONG MarginFor(const Entry& e, const RECT& r) {
+    float px = GetDpiForWindow(e.hwnd) / 96.f;
+    if (px <= 0) px = 1;
+    float H = (float)std::min(r.right - r.left, r.bottom - r.top);
+    if (!e.pieces.empty()) {  // várias peças: a maior lente entre elas
+        H = 0;
+        for (auto& p : e.pieces) H = std::max(H, std::min(p.r.right - p.r.left, p.r.bottom - p.r.top));
+    }
+    const float k = std::clamp(g_style.refraction, 0.f, 1.f);
+    const float dmax = std::min(H * 0.8f, 60 * px) * (0.4f + 1.0f * k);
+    const float sigma = std::max(0.6f + 11.f * g_style.tintK, e.pieceFrost) * px;
+    return std::clamp((LONG)std::ceil(3 * sigma + dmax + 4), (LONG)8, COMPOSE_MARGIN);
+}
 std::vector<RECT> GlassAreas() {
     std::vector<RECT> v;
     RECT all{ 0, 0, (LONG)texW, (LONG)texH };
@@ -775,7 +791,8 @@ std::vector<RECT> GlassAreas() {
         if (!e.real || !IsWindowVisible(e.hwnd) || CoveredByFullscreen(e.hwnd)) continue;
         RECT r; GetWindowRect(e.hwnd, &r);
         OffsetRect(&r, -mon.left, -mon.top);
-        InflateRect(&r, COMPOSE_MARGIN, COMPOSE_MARGIN);
+        const LONG mg = MarginFor(e, r);
+        InflateRect(&r, mg, mg);
         if (!IntersectRect(&r, &r, &all)) continue;
         bool merged = false;  // sobrepostas viram uma só
         for (auto& o : v) { RECT x; if (IntersectRect(&x, &o, &r)) { UnionRect(&o, &o, &r); merged = true; break; } }
