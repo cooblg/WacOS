@@ -28,3 +28,4 @@ jobs:
             bin/WacOSShell.exe
             bin/WacOSSettings.exe
             bin/WacOSFinder.exe
+            bin/WacOSQuickTime.exe
