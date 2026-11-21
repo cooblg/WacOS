@@ -184,6 +184,23 @@ void Apply(HWND h, int kind, RECT t, RECT start) {
 void UnmaximizeUnderCursor(HWND h) {
     POINT c; GetCursorPos(&c);
     RECT max; GetWindowRect(h, &max);
+    if (!IsZoomed(h)) {  // preenchida/encaixada por nós (não maximizada): volta ao retângulo de antes
+        auto b = g_before.find(h);
+        if (b == g_before.end()) return;
+        MONITORINFO mi{ sizeof(mi) };
+        GetMonitorInfoW(MonitorFromWindow(h, MONITOR_DEFAULTTONEAREST), &mi);
+        int w = b->second.right - b->second.left, hh = b->second.bottom - b->second.top;
+        float fx = (g_press.x - max.left) / (float)std::max<LONG>(max.right - max.left, 1);
+        int left = std::clamp<int>(c.x - (int)(fx * w), mi.rcWork.left - w + 80, mi.rcWork.right - 80);
+        int top = std::max<int>((int)mi.rcWork.top, c.y - std::min<int>(std::max<int>(g_press.y - max.top, 8), 40));
+        g_before.erase(b); g_tiled.erase(h);
+        g_ignoreEnd = h;
+        SendMessageTimeoutW(h, WM_CANCELMODE, 0, 0, SMTO_ABORTIFHUNG, 200, nullptr);
+        SetWindowPos(h, nullptr, left, top, w, hh, SWP_NOZORDER | SWP_NOACTIVATE);
+        PostMessageW(h, WM_SYSCOMMAND, 0xF012, MAKELPARAM((WORD)(short)c.x, (WORD)(short)c.y));
+        Log(L"encaixe: janela preenchida arrastada -> tamanho de antes %dx%d debaixo do ponteiro", w, hh);
+        return;
+    }
     WINDOWPLACEMENT wp{ sizeof(wp) };
     if (!GetWindowPlacement(h, &wp)) return;
     MONITORINFO mi{ sizeof(mi) };
@@ -213,7 +230,7 @@ void Tick() {
     if (!g_drag || !IsWindow(g_drag)) { Hide(); return; }
     if (g_maxDrag) {
         POINT c; GetCursorPos(&c);
-        if (!(GetAsyncKeyState(GetSystemMetrics(SM_SWAPBUTTON) ? VK_RBUTTON : VK_LBUTTON) & 0x8000) || !IsZoomed(g_drag)) g_maxDrag = false;
+        if (!(GetAsyncKeyState(GetSystemMetrics(SM_SWAPBUTTON) ? VK_RBUTTON : VK_LBUTTON) & 0x8000)) g_maxDrag = false;
         else if (std::abs(c.x - g_press.x) > 6 || std::abs(c.y - g_press.y) > 6) {
             g_maxDrag = false;
             HWND h = g_drag;
@@ -251,7 +268,14 @@ void CALLBACK OnEvent(HWINEVENTHOOK, DWORD ev, HWND h, LONG obj, LONG, DWORD, DW
         g_drag = h;
         GetWindowRect(h, &g_start);
         GetCursorPos(&g_press);
-        g_maxDrag = IsZoomed(h) != FALSE;
+        // maximizada pelo Windows, ou preenchida/encaixada por nós e ainda no mesmo lugar: volta ao tamanho de antes
+        // assim que começar a andar (antes a preenchida só voltava ao SOLTAR, e grande durante o arrasto)
+        {
+            auto tl = g_tiled.find(h);
+            bool ours = !GetPropW(h, L"MacJanela") && tl != g_tiled.end() && g_before.count(h) &&
+                        g_start.right - g_start.left == tl->second.right - tl->second.left && g_start.bottom - g_start.top == tl->second.bottom - tl->second.top;
+            g_maxDrag = IsZoomed(h) || ours;
+        }
         Hide();
         g_timer = SetTimer(nullptr, 0, 15, TimerProc);
     } else if (ev == EVENT_SYSTEM_MOVESIZEEND) {
