@@ -777,7 +777,12 @@ static bool AskShellGlass(const Level& L, bool dark) {
 }
 static void TellShellGlass(const Level& L, int code) {
     if (!L.ext) return;
-    if (HWND sh = FindWindowW(L"ShellMensagens", nullptr)) PostMessageW(sh, VidroMsgId(), (WPARAM)L.hwnd, VidroParam(L, code, false));
+    HWND sh = FindWindowW(L"ShellMensagens", nullptr);
+    if (!sh) return;
+    // menu do próprio Shell (Dock, mesa): na hora, sem fila. Postado, o aviso só era lido depois da ação escolhida
+    // (que roda nesta mesma thread), e o vidro ficava na tela sem o menu enquanto ela rodava.
+    if (GetWindowThreadProcessId(sh, nullptr) == GetCurrentThreadId()) SendMessageW(sh, VidroMsgId(), (WPARAM)L.hwnd, VidroParam(L, code, false));
+    else PostMessageW(sh, VidroMsgId(), (WPARAM)L.hwnd, VidroParam(L, code, false));
 }
 
 // Abre um nível. Raiz: no ponteiro. Submenu: ao lado do item pai (parentWin/itemTop em pixels de tela).
