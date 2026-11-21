@@ -27,3 +27,4 @@ jobs:
           path: |
             bin/WacOSShell.exe
             bin/WacOSSettings.exe
+            bin/WacOSFinder.exe
