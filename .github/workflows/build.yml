@@ -5,7 +5,7 @@ name: build
 
 on:
   push:
-    branches: [main, fork-build]
+    branches: [main, "fork-build*"]
   workflow_dispatch:
 
 jobs:
