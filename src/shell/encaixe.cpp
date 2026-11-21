@@ -29,6 +29,14 @@ bool g_turnedOff;          // o Shell desligou o encaixe do Windows (devolve ao 
 BOOL g_winBefore = TRUE;
 std::map<HWND, RECT> g_before;  // janelas sem a DLL encaixadas por nós: o retângulo de antes
 std::map<HWND, RECT> g_tiled;   // ...e o retângulo em que ficaram
+// Arrastar uma janela MAXIMIZADA pelo Windows (Chrome, Discord, Electron, Photoshop: os apps com barra própria, cujo
+// maximizar a DLL não converte): quem fazia ela voltar ao tamanho normal e seguir o ponteiro era o encaixe do Windows,
+// que o Shell desliga. Sem ele a janela ficava parada (21/11/2026). Agora: andou alguns pixels com o botão apertado ->
+// cancela o arrasto preso, volta ao tamanho normal debaixo do ponteiro e começa um arrasto novo (o botão continua
+// apertado, então ela segue o ponteiro), como no Mac.
+bool g_maxDrag;            // o arrasto atual começou com a janela maximizada
+POINT g_press{};           // onde o botão desceu
+HWND g_ignoreEnd;          // o fim do arrasto cancelado de propósito (não é um "soltou")
 
 bool Enabled() {
     wchar_t v[8] = L"1"; DWORD n = sizeof(v);
@@ -172,8 +180,51 @@ void Apply(HWND h, int kind, RECT t, RECT start) {
     g_tiled[h] = now;
 }
 
+// a janela maximizada volta ao tamanho normal debaixo do ponteiro e o arrasto recomeça com ela
+void UnmaximizeUnderCursor(HWND h) {
+    POINT c; GetCursorPos(&c);
+    RECT max; GetWindowRect(h, &max);
+    WINDOWPLACEMENT wp{ sizeof(wp) };
+    if (!GetWindowPlacement(h, &wp)) return;
+    MONITORINFO mi{ sizeof(mi) };
+    GetMonitorInfoW(MonitorFromWindow(h, MONITOR_DEFAULTTONEAREST), &mi);
+    // rcNormalPosition é em coordenadas da área de trabalho (sem WS_EX_TOOLWINDOW)
+    bool ws = !(GetWindowLongW(h, GWL_EXSTYLE) & WS_EX_TOOLWINDOW);
+    int dx = ws ? mi.rcWork.left - mi.rcMonitor.left : 0, dy = ws ? mi.rcWork.top - mi.rcMonitor.top : 0;
+    int w = wp.rcNormalPosition.right - wp.rcNormalPosition.left, hh = wp.rcNormalPosition.bottom - wp.rcNormalPosition.top;
+    if (w <= 0 || hh <= 0) return;
+    // mesmo ponto relativo na horizontal; na vertical, o ponteiro continua na barra (no máximo 40 px do topo)
+    float fx = (g_press.x - max.left) / (float)std::max<LONG>(max.right - max.left, 1);
+    int left = c.x - (int)(fx * w), top = c.y - std::min<int>(std::max<int>(g_press.y - mi.rcWork.top, 8), 40);
+    left = std::clamp<int>(left, mi.rcWork.left - w + 80, mi.rcWork.right - 80);
+    top = std::max<int>(top, mi.rcWork.top);
+    wp.rcNormalPosition = { left - dx, top - dy, left - dx + w, top - dy + hh };
+    wp.showCmd = SW_SHOWNORMAL;
+    wp.flags = 0;
+    g_ignoreEnd = h;
+    SendMessageTimeoutW(h, WM_CANCELMODE, 0, 0, SMTO_ABORTIFHUNG, 200, nullptr);  // sai do arrasto preso
+    SetWindowPlacement(h, &wp);
+    // arrasto novo pela barra (0xF012 = SC_MOVE | HTCAPTION): o botão ainda está apertado, ela segue o ponteiro
+    PostMessageW(h, WM_SYSCOMMAND, 0xF012, MAKELPARAM((WORD)(short)c.x, (WORD)(short)c.y));
+    Log(L"encaixe: janela maximizada arrastada -> tamanho normal %dx%d debaixo do ponteiro", w, hh);
+}
+
 void Tick() {
     if (!g_drag || !IsWindow(g_drag)) { Hide(); return; }
+    if (g_maxDrag) {
+        POINT c; GetCursorPos(&c);
+        if (!(GetAsyncKeyState(GetSystemMetrics(SM_SWAPBUTTON) ? VK_RBUTTON : VK_LBUTTON) & 0x8000) || !IsZoomed(g_drag)) g_maxDrag = false;
+        else if (std::abs(c.x - g_press.x) > 6 || std::abs(c.y - g_press.y) > 6) {
+            g_maxDrag = false;
+            HWND h = g_drag;
+            if (g_timer) { KillTimer(nullptr, g_timer); g_timer = 0; }
+            g_drag = nullptr;
+            Hide();
+            UnmaximizeUnderCursor(h);
+            return;
+        }
+        return;  // maximizada e parada: sem prévia de encaixe
+    }
     RECT t; int k = Target(g_drag, &t);
     if (k) Show(k, t); else if (g_kind) Hide();
 }
@@ -199,10 +250,14 @@ void CALLBACK OnEvent(HWINEVENTHOOK, DWORD ev, HWND h, LONG obj, LONG, DWORD, DW
         if (hit >= HTLEFT && hit <= HTBOTTOMRIGHT) return;
         g_drag = h;
         GetWindowRect(h, &g_start);
+        GetCursorPos(&g_press);
+        g_maxDrag = IsZoomed(h) != FALSE;
         Hide();
         g_timer = SetTimer(nullptr, 0, 15, TimerProc);
     } else if (ev == EVENT_SYSTEM_MOVESIZEEND) {
+        if (h == g_ignoreEnd) { g_ignoreEnd = nullptr; return; }  // o arrasto que nós cancelamos (vem outro)
         if (h != g_drag) return;
+        g_maxDrag = false;
         if (g_timer) { KillTimer(nullptr, g_timer); g_timer = 0; }
         HWND d = g_drag; g_drag = nullptr;
         Hide();
