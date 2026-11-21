@@ -471,6 +471,8 @@
 { L"Transparência do vidro", L"유리 투명도" },
 { L"Opaco", L"불투명" },
 { L"Mostrar fundo da barra de menus", L"메뉴 막대 배경 보기" },
+{ L"Barra de menus de vidro (Liquid Glass)", L"유리 메뉴 막대 (Liquid Glass)" },
+{ L"O vidro do Dock atrás da barra de menus: as letras ficam legíveis em qualquer papel de parede.", L"메뉴 막대 뒤에 Dock과 같은 유리를 깔아서 어떤 배경화면에서도 글자가 잘 보여요." },
 { L"Desligado, a barra fica sem fundo, só com o papel de parede atrás (como no Tahoe).", L"끄면 메뉴 막대에 배경이 없고 뒤의 배경화면만 보입니다(Tahoe와 같음)." },
 { L"Transparência", L"투명도" },
 { L"Efeito gênio ao minimizar", L"최소화할 때 지니 효과" },

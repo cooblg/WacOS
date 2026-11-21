@@ -471,6 +471,8 @@
 { L"Transparência do vidro", L"Glastransparenz" },
 { L"Opaco", L"Deckend" },
 { L"Mostrar fundo da barra de menus", L"Hintergrund der Menüleiste anzeigen" },
+{ L"Barra de menus de vidro (Liquid Glass)", L"Menüleiste aus Glas (Liquid Glass)" },
+{ L"O vidro do Dock atrás da barra de menus: as letras ficam legíveis em qualquer papel de parede.", L"Das Dock-Glas hinter der Menüleiste: Die Schrift bleibt auf jedem Hintergrund lesbar." },
 { L"Desligado, a barra fica sem fundo, só com o papel de parede atrás (como no Tahoe).", L"Wenn aus, hat die Leiste keinen Hintergrund, nur das Hintergrundbild dahinter (wie in Tahoe)." },
 { L"Transparência", L"Transparenz" },
 { L"Efeito gênio ao minimizar", L"Trichtereffekt beim Minimieren" },

@@ -471,6 +471,8 @@
 { L"Transparência do vidro", L"Cam saydamlığı" },
 { L"Opaco", L"Opak" },
 { L"Mostrar fundo da barra de menus", L"Menü çubuğu arka planını göster" },
+{ L"Barra de menus de vidro (Liquid Glass)", L"Cam menü çubuğu (Liquid Glass)" },
+{ L"O vidro do Dock atrás da barra de menus: as letras ficam legíveis em qualquer papel de parede.", L"Menü çubuğunun arkasında Dock camı: yazılar her duvar kâğıdında okunur." },
 { L"Desligado, a barra fica sem fundo, só com o papel de parede atrás (como no Tahoe).", L"Kapalıyken çubuğun arka planı olmaz, yalnızca arkasında duvar kâğıdı görünür (Tahoe’daki gibi)." },
 { L"Transparência", L"Saydamlık" },
 { L"Efeito gênio ao minimizar", L"Küçültürken lamba efekti" },
