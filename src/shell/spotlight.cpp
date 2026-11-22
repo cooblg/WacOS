@@ -69,7 +69,8 @@ void Metricas() {
 }
 const float LEO_ROW = 20, LEO_COL = 112;  // Leopard: linhas de 20 e a coluna das categorias
 const UINT WM_SP_FILES = WM_APP + 60, WM_SP_ICON = WM_APP + 61, WM_SP_APPS = WM_APP + 62, WM_SP_FRAME = WM_APP + 63, WM_SP_SUGG = WM_APP + 64, WM_SP_FORA = WM_APP + 65;
-const UINT_PTR T_SEARCH = 1, T_CARET = 2, T_ICONS = 3, T_REGRAB = 4;
+const UINT_PTR T_SEARCH = 1, T_CARET = 2, T_ICONS = 3, T_REGRAB = 4, T_UPLOAD = 9;
+const UINT WM_SP_PRELOADED = WM_APP + 66;  // os ícones dos apps foram pré-carregados: sobem para a GPU com o painel fechado
 
 enum Kind { K_APP, K_SETTING, K_DOC, K_FOLDER, K_IMAGE, K_MEDIA, K_OTHER, K_CALC, K_WEB };
 
@@ -911,6 +912,12 @@ void LoadIcon(const Result& copy, const std::wstring& key, int px) {
                     }
                 }
             }
+            // guardado no tamanho em que aparece (a grade usa 77, com folga): os ~300 apps pré-carregados a 256 px
+            // seriam ~75 MB de memória; a 128 são ~20 MB, e a mesma nitidez na tela
+            if (ok && !got.lowres) {
+                static const UINT keep = (UINT)std::clamp((int)std::ceil(128.f * GetDpiForSystem() / 96.f), 96, 256);
+                ui::Downscale(got.w, got.h, got.px, keep);
+            }
         } else if (copy.kind == K_SETTING && EhWin(copy.target)) {
             std::wstring de;
             std::vector<BYTE> id;
@@ -966,6 +973,56 @@ ID2D1Bitmap* IconFor(ID2D1RenderTarget* rt, const Result& r) {
         ic.bmp = ui::Bitmap(rt, ic.w, ic.h, ic.px); ic.px.clear(); ic.px.shrink_to_fit();
     }
     return ic.bmp;
+}
+
+// ---- Ícones dos apps prontos antes de abrir (pedido de 22/11/2026: o Apps da tecla Windows abria com ícones
+// faltando e iam aparecendo). Antes eles só eram pedidos quando a célula era desenhada (duas threads, até 3 subindo
+// para a GPU por quadro), então a primeira abertura depois de o Shell iniciar mostrava buracos. Agora, assim que a
+// lista de apps fica pronta, uma thread de fundo carrega os ícones de todos, e com o painel fechado eles sobem para a
+// GPU aos poucos (8 a cada 16 ms). Na abertura já está tudo lá.
+std::atomic<bool> g_preloading;
+void PreloadIcons() {
+    if (g_preloading.exchange(true)) return;
+    std::vector<Result> list;
+    { std::lock_guard<std::mutex> l(g_mu); for (auto& a : g_apps) list.push_back({ K_APP, a.name, a.parsing, L"", 0 }); }
+    std::thread([list] {
+        CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+        SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_BEGIN);
+        int n = 0;
+        for (auto& r : list) {
+            std::wstring key = IconKey(r);
+            {
+                std::lock_guard<std::mutex> l(g_iconMu);
+                auto& ic = g_icons[key];
+                if (ic.loading || !ic.px.empty() || ic.bmp || ic.failed) continue;
+                ic.loading = true;
+            }
+            LoadIcon(r, key, 96);
+            n++;
+        }
+        SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_END);
+        CoUninitialize();
+        Log(L"spotlight: ícones de %d apps carregados antes de abrir", n);
+        g_preloading = false;
+        if (g_wnd) PostMessageW(g_wnd, WM_SP_PRELOADED, 0, 0);
+    }).detach();
+}
+// sobe até `max` ícones de apps para a GPU (o contexto de ui::Gpu(): os bitmaps valem no desenho do painel);
+// false = não sobrou nenhum
+bool UploadIcons(int max) {
+    ID2D1DeviceContext* dc = ui::Gpu();
+    if (!dc) return false;
+    const std::wstring st = ui::IconStyle(), pre = L"app:" + ui::IconStyleKey() + L":";
+    std::lock_guard<std::mutex> l(g_iconMu);
+    int n = 0;
+    for (auto& [k, ic] : g_icons) {
+        if (ic.bmp || ic.px.empty() || k.compare(0, pre.size(), pre)) continue;
+        if (n++ >= max) return true;
+        if (st != L"padrao") ui::StyleIcon(ic.w, ic.h, ic.px, st);  // o mesmo do IconFor
+        ic.bmp = ui::Bitmap(dc, ic.w, ic.h, ic.px);
+        ic.px.clear(); ic.px.shrink_to_fit();
+    }
+    return false;
 }
 
 // ---- resultados e linhas
@@ -2567,7 +2624,8 @@ LRESULT CALLBACK Proc(HWND h, UINT m, WPARAM w, LPARAM l) {
     }
     switch (m) {
     case WM_PAINT: { PAINTSTRUCT ps; BeginPaint(h, &ps); EndPaint(h, &ps); Paint(); return 0; }
-    case WM_SP_APPS: if (g_open && (!g_query.empty() || ModePanel())) Refresh(); return 0;
+    case WM_SP_APPS: PreloadIcons(); if (g_open && (!g_query.empty() || ModePanel())) Refresh(); return 0;
+    case WM_SP_PRELOADED: if (!g_open) SetTimer(h, T_UPLOAD, 16, nullptr); return 0;
     case WM_SP_ICON:  // ícones chegam aos montes (a grade de apps): um redesenho só para vários
         SetTimer(h, T_ICONS, 24, nullptr);
         return 0;
@@ -2617,6 +2675,7 @@ LRESULT CALLBACK Proc(HWND h, UINT m, WPARAM w, LPARAM l) {
         } else if (w == T_CARET) { g_caretOn = !g_caretOn; Paint(); }
         else if (w == T_REGRAB) { KillTimer(h, T_REGRAB); if (g_open) Grab(h); }
         else if (w == T_ICONS) { KillTimer(h, T_ICONS); Paint(); }
+        else if (w == T_UPLOAD) { if (g_open || !UploadIcons(8)) KillTimer(h, T_UPLOAD); }  // aberto: o desenho sobe os que faltarem
         else if (w == T_HOLD) {  // segurou um app: a grade treme (como no Launchpad)
             KillTimer(h, T_HOLD);
             if (g_press >= 0 && !g_edit && CanArrange()) StartEdit();
