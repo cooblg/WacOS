@@ -235,6 +235,10 @@ void Loader() {
 
 // Lê a lista de novo numa thread de fundo; pedidos durante uma leitura fazem mais uma no fim.
 void Scan() {
+    // Tahoe: a tecla Windows e o ícone do Launchpad abrem o Apps do Spotlight (que tem os ícones dele); esta grade nunca
+    // aparece. Ler os ~300 apps e os ícones deles aqui era trabalho e ~20 MB de memória à toa. Fica para quando o
+    // Launchpad abrir de verdade (tema Sequoia/Leopard: ver Toggle).
+    if (liquid::On() && !g_open) return;
     g_scanAgain = true;
     bool idle = false;
     if (!g_scanning.compare_exchange_strong(idle, true)) return;
@@ -1065,6 +1069,7 @@ void launchpad::Warm() {
 void launchpad::Toggle() {
     // Tahoe (macOS 26): o Launchpad virou "Apps", o Spotlight no modo Aplicativos (grade de 5 com categorias)
     if (liquid::On() && !g_open) { spotlight::OpenMode(1); return; }
+    if (!g_ready && !g_scanning) Scan();  // a lista não foi lida (o Shell abriu no Tahoe): lê agora
     Log(L"launchpad: Toggle (aberto=%d fechando=%d)", g_open ? 1 : 0, g_closing ? 1 : 0);
     if (g_open && !g_closing) { Close(); return; }
     MONITORINFO mi{ sizeof(mi) };
