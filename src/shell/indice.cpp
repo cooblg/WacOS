@@ -11,6 +11,7 @@
 #include <shared_mutex>
 #include <thread>
 #include <map>
+#include <mutex>
 #include <set>
 
 namespace {
@@ -90,6 +91,49 @@ std::vector<std::pair<std::wstring, bool>> Roots() {
     return r;
 }
 
+// ---- Pastas fora do índice (como a Privacidade do Spotlight no Mac): %APPDATA%\Shell\spotlight-excluir.txt, um caminho
+// por linha (D:\Jogos, E:\OMSI-2\Vehicles...). Pastas de jogos e mods têm centenas de milhares de arquivos que ninguém
+// procura pelo Spotlight e ocupavam a maior parte da memória do índice. Mudou o arquivo: varredura completa.
+std::mutex g_exclMx;
+std::vector<std::wstring> g_excl;  // minúsculas, sem a barra no fim
+FILETIME g_exclTime{};
+std::wstring ExclFile() { return g_file.empty() ? L"" : g_file.substr(0, g_file.find_last_of(L'\\')) + L"\\spotlight-excluir.txt"; }
+// relê a lista se o arquivo mudou; true = mudou
+bool LoadExclusions() {
+    std::wstring fn = ExclFile();
+    WIN32_FILE_ATTRIBUTE_DATA fa{};
+    FILETIME t{};
+    if (!fn.empty() && GetFileAttributesExW(fn.c_str(), GetFileExInfoStandard, &fa)) t = fa.ftLastWriteTime;
+    std::lock_guard<std::mutex> l(g_exclMx);
+    if (!CompareFileTime(&t, &g_exclTime)) return false;
+    g_exclTime = t;
+    g_excl.clear();
+    FILE* f = nullptr;
+    if (!fn.empty() && !_wfopen_s(&f, fn.c_str(), L"r, ccs=UTF-8") && f) {
+        wchar_t line[1024];
+        while (fgetws(line, 1024, f)) {
+            std::wstring s = line;
+            while (!s.empty() && (s.back() == L'\n' || s.back() == L'\r' || s.back() == L' ' || s.back() == L'\\' || s.back() == L'"')) s.pop_back();
+            while (!s.empty() && (s[0] == L' ' || s[0] == L'"' || s[0] == 0xFEFF)) s.erase(0, 1);
+            if (s.size() < 2 || s[0] == L'#') continue;
+            for (auto& c : s) c = towlower(c);
+            g_excl.push_back(s);
+        }
+        fclose(f);
+    }
+    Log(L"índice: %zu pasta(s) fora do índice (spotlight-excluir.txt)", g_excl.size());
+    return true;
+}
+bool Excluded(const std::wstring& full) {
+    std::lock_guard<std::mutex> l(g_exclMx);
+    if (g_excl.empty()) return false;
+    std::wstring p = full;
+    for (auto& c : p) c = towlower(c);
+    for (auto& e : g_excl)
+        if (p.size() >= e.size() && !p.compare(0, e.size(), e) && (p.size() == e.size() || p[e.size()] == L'\\')) return true;
+    return false;
+}
+
 // filhos de uma pasta, com os filtros da varredura (sem pastas do sistema, junções e as puladas)
 template <class F> void List(const std::wstring& path, bool top, bool profile, F&& f) {
     WIN32_FIND_DATAW fd;
@@ -102,6 +146,7 @@ template <class F> void List(const std::wstring& path, bool top, bool profile, F
         if (fd.dwFileAttributes & FILE_ATTRIBUTE_SYSTEM && dir) continue;
         if (dir && (fd.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)) continue;  // junções (evita voltas)
         if (dir && SkipDir(n, top, profile)) continue;
+        if (dir && Excluded(path + L"\\" + n)) continue;  // spotlight-excluir.txt
         size_t len = wcslen(n);
         if (len > 0xFFFF) continue;
         f(n, len, dir, ((uint64_t)fd.ftLastWriteTime.dwHighDateTime << 32) | fd.ftLastWriteTime.dwLowDateTime);
@@ -174,8 +219,30 @@ bool Load(Index& ix) {
     return ok;
 }
 
+// memória do índice e as pastas com mais itens (para escolher o que deixar de fora em spotlight-excluir.txt)
+void Stats(const Index& ix) {
+    const uint32_t N = (uint32_t)ix.nodes.size();
+    std::vector<uint32_t> top(N, UINT32_MAX);  // o ancestral logo abaixo da raiz (pasta do primeiro nível)
+    std::map<uint32_t, uint32_t> count;
+    for (uint32_t i = 0; i < N; i++) {
+        uint32_t p = ix.nodes[i].parent;
+        if (p == UINT32_MAX || p >= i || !ix.nodes[i].len) continue;
+        top[i] = ix.nodes[p].parent == UINT32_MAX ? i : top[p];
+        if (top[i] != UINT32_MAX) count[top[i]]++;
+    }
+    std::vector<std::pair<uint32_t, uint32_t>> v(count.begin(), count.end());
+    std::sort(v.begin(), v.end(), [](auto& a, auto& b) { return a.second > b.second; });
+    std::wstring s;
+    for (size_t k = 0; k < v.size() && k < 12; k++) {
+        wchar_t b[32]; swprintf_s(b, L" %u", v[k].second);
+        s += L"\n    " + PathOf(ix, v[k].first) + b;
+    }
+    double mb = (N * (double)sizeof(Node) + ix.names.size() * 2.0) / (1024 * 1024);
+    Log(L"índice: %u itens, %.0f MB na memória; pastas com mais itens:%ls", N, mb, s.c_str());
+}
 void Rebuild() {
     DWORD t0 = GetTickCount();
+    LoadExclusions();
     Index ix;
     ix.nodes.reserve(200000);
     std::wstring perRoot;
@@ -188,6 +255,7 @@ void Rebuild() {
     size_t n = ix.nodes.size();
     ix.nodes.shrink_to_fit();   // sem a folga do crescimento (o texto dobrava de capacidade: dezenas de MB a mais)
     ix.names.shrink_to_fit();
+    Stats(ix);
     Save(ix);
     g_ultimaCompleta = AgoraFt();
     { std::unique_lock<std::shared_mutex> l(g_mx); g_idx = std::move(ix); g_dead = 0; }
@@ -429,7 +497,7 @@ void Watcher() {
                     std::wstring rel(fi->FileName, fi->FileNameLength / sizeof(wchar_t));
                     std::wstring fullPath = w.base + (w.base.back() == L'\\' ? L"" : L"\\") + rel;
                     std::wstring fromRoot = fullPath.size() > w.root.size() + 1 ? fullPath.substr(w.root.size() + 1) : L"";
-                    if (!fromRoot.empty() && Relevant(fromRoot, w.profile)) {
+                    if (!fromRoot.empty() && Relevant(fromRoot, w.profile) && !Excluded(fullPath)) {
                         std::wstring parent = fullPath.substr(0, fullPath.find_last_of(L'\\'));
                         if (parent.size() <= w.root.size()) parent = w.root;  // mudou direto na raiz ("C:")
                         pending.insert(parent);
@@ -444,6 +512,7 @@ void Watcher() {
         }
         DWORD now = GetTickCount(), d = GetLogicalDrives();
         bool drivesChanged = d != drives;
+        if (LoadExclusions()) { full = true; lastBuild = now - 120001; lastChange = now - 3001; }  // lista mudou: refaz sem as pastas
         bool calm = now - lastChange > 3000;
         // modo jogo (jogo.cpp): o jogo escreve sem parar (logs, cache de shaders) e cada leva de mudanças virava uma
         // reindexação no meio da partida; as pastas ficam anotadas em `pending` e entram quando o jogo fechar
@@ -491,6 +560,7 @@ void indice::Start() {
             { std::unique_lock<std::shared_mutex> l(g_mx); g_idx = std::move(ix); }
             g_ready = true;
             Log(L"índice: %zu itens lidos do disco", n);
+            { std::shared_lock<std::shared_mutex> l(g_mx); Stats(g_idx); }
             // com o índice salvo a busca já funciona: a varredura nova espera o login assentar (antes: corria
             // junto com o boot por ~3 minutos, disputando disco com o Windows e os apps)
             Sleep(GetTickCount64() < 10 * 60 * 1000 ? 4 * 60 * 1000 : 30 * 1000);
@@ -515,7 +585,7 @@ void indice::Start() {
                 recente = a > f && a - f < 15ULL * 60 * 10000000;  // gravado há menos de 15 min (antes da espera acima)
             }
         }
-        if (recente) Log(L"índice: gravado há pouco (o Shell só reiniciou): sem a varredura completa");
+        if (recente) { LoadExclusions(); Log(L"índice: gravado há pouco (o Shell só reiniciou): sem a varredura completa"); }
         else {
             while (jogo::Ativo()) Sleep(5000);  // a varredura da abertura (disco inteiro) espera o jogo fechar
             SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_BEGIN);
