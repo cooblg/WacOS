@@ -1498,6 +1498,8 @@ void Assenta() {
     if (baixo) Log(L"barra de menus: embaixo em %d,%d-%d,%d, o Dock de %d a %d", q.left, q.top, q.right, q.bottom, e, d);
     RenderAll();
     if (moveu) shell::ApplyWorkArea();
+}
+
 // Barra de menus de vidro (Ajustes > Transparência > "Barra de menus de vidro", barra_vidro=1, só no Liquid Glass):
 // como o Dock, uma janela logo atrás de cada barra com o vidro do backdrop (o real: captura da tela, desfoque leve,
 // vibrância, borda que refrata e brilho). Sem ela a barra do Tahoe não tem fundo nenhum, e em papel de parede
