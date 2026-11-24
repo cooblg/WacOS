@@ -7,6 +7,7 @@
 // %APPDATA%\Shell\calculadora-historico.txt.
 #define NOMINMAX
 #include <windows.h>
+#include "../comum/fonte_cjk.h" // a reserva para coreano, japonês e chinês
 #include <windowsx.h>
 #include <d2d1.h>
 #include <dwrite.h>
@@ -454,7 +455,7 @@ IDWriteTextFormat* Font(float size, DWRITE_FONT_WEIGHT w = DWRITE_FONT_WEIGHT_NO
     if (it != g_fonts.end()) return it->second;
     IDWriteTextFormat* tf = nullptr;
     const wchar_t* family = serif ? L"Times New Roman" : fam ? g_textFamily.c_str() : g_family.c_str();
-    g_dw->CreateTextFormat(family, nullptr, w, serif ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf);
+    cjk::Format(g_dw, family, nullptr, w, serif ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf);
     if (tf) {
         tf->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);
         tf->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
@@ -1583,7 +1584,7 @@ void Render() {
         static IDWriteTextFormat* tt = [] {
             IDWriteTextFormat* f = nullptr; IDWriteFactory* dw = nullptr;
             DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), (IUnknown**)&dw);
-            if (dw) { dw->CreateTextFormat(L"Lucida Sans Unicode", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 13, L"pt-br", &f); dw->Release(); }
+            if (dw) { cjk::Format(dw, L"Lucida Sans Unicode", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 13, L"pt-br", &f); dw->Release(); }
             if (f) { f->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER); f->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER); }
             return f;
         }();

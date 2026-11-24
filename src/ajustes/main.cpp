@@ -1,6 +1,7 @@
 ﻿// Ajustes do Sistema: janela, barra lateral, barra de ferramentas, grupos e controles no visual do
 // macOS Sequoia. As medidas vêm de capturas do Ajustes do Sequoia (janela de 715 pt de largura).
 #include "ajustes.h"
+#include "../comum/fonte_cjk.h" // a reserva para coreano, japonês e chinês
 #include "../menu/context_menu.h"
 #include "../comum/simbolos.h"
 #include "../comum/vidro.h"
@@ -476,7 +477,7 @@ namespace {
 // ================= Fontes
 IDWriteTextFormat* Format(const wchar_t* family, float size, DWRITE_FONT_WEIGHT weight, DWRITE_TEXT_ALIGNMENT a, bool wrap = false) {
     IDWriteTextFormat* tf = nullptr;
-    gfx::dw->CreateTextFormat(family, nullptr, weight, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf);
+    cjk::Format(gfx::dw, family, nullptr, weight, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf);
     if (!tf) return nullptr;
     tf->SetTextAlignment(a);
     tf->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);

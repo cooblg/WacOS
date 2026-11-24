@@ -14,6 +14,7 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
+#include "../comum/fonte_cjk.h" // a reserva para coreano, japonês e chinês
 #include <windowsx.h>
 #include <d2d1.h>
 #include <dwrite.h>
@@ -896,7 +897,7 @@ static D2D1_COLOR_F Fg2() { return g_dark ? C(0xFFFFFF, 0.55f) : C(0x6E6E73); }
 
 static IDWriteTextFormat* Fmt(float size, DWRITE_FONT_WEIGHT w, bool title = false, DWRITE_TEXT_ALIGNMENT al = DWRITE_TEXT_ALIGNMENT_LEADING) {
     IDWriteTextFormat* f = nullptr;
-    g_dw->CreateTextFormat((title ? g_fontTitle : g_fontUI).c_str(), nullptr, w, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, g_pt ? L"pt-BR" : L"en-US", &f);
+    cjk::Format(g_dw, (title ? g_fontTitle : g_fontUI).c_str(), nullptr, w, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, g_pt ? L"pt-BR" : L"en-US", &f);
     if (f) { f->SetTextAlignment(al); f->SetWordWrapping(DWRITE_WORD_WRAPPING_WRAP); }
     return f;
 }

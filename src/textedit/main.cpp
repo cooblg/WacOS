@@ -3,6 +3,7 @@
 // Ctrl+N novo (outra janela), Ctrl+O abrir, Ctrl+S salvar, Ctrl+Shift+S salvar como, Ctrl+Shift+T texto simples
 // / formatado, Ctrl+B/I/U, Ctrl+W fechar (pergunta se há alterações). Título: nome — Editado.
 #include "../comum/app2d.h"
+#include "../comum/fonte_cjk.h" // a reserva para coreano, japonês e chinês
 #include "../menu/context_menu.h"
 #include <richedit.h>
 #include <shobjidl.h>
@@ -547,13 +548,13 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE, PWSTR, int show) {
     g_tfBtn = Fmt(12.5f, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_TEXT_ALIGNMENT_CENTER);
     g_tfIcon = Fmt(13, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_TEXT_ALIGNMENT_CENTER, false, IconFamily());
     g_tfB = Fmt(14, DWRITE_FONT_WEIGHT_BOLD, DWRITE_TEXT_ALIGNMENT_CENTER, false, L"Georgia");
-    g_tfI = nullptr; dw->CreateTextFormat(L"Georgia", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_ITALIC, DWRITE_FONT_STRETCH_NORMAL, 14, L"", &g_tfI);
+    g_tfI = nullptr; cjk::Format(dw, L"Georgia", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_ITALIC, DWRITE_FONT_STRETCH_NORMAL, 14, L"", &g_tfI);
     if (g_tfI) { g_tfI->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER); g_tfI->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER); }
     g_tfU = Fmt(14, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_TEXT_ALIGNMENT_CENTER, false, L"Georgia");
     g_tfTitleG = Fmt(13, DWRITE_FONT_WEIGHT_BOLD);
     g_tfCtl = Fmt(12.5f, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_TEXT_ALIGNMENT_CENTER);
     g_tfCtlB = Fmt(12.5f, DWRITE_FONT_WEIGHT_BOLD, DWRITE_TEXT_ALIGNMENT_CENTER);
-    g_tfCtlI = nullptr; dw->CreateTextFormat(family.c_str(), nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_ITALIC, DWRITE_FONT_STRETCH_NORMAL, 12.5f, L"", &g_tfCtlI);
+    g_tfCtlI = nullptr; cjk::Format(dw, family.c_str(), nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_ITALIC, DWRITE_FONT_STRETCH_NORMAL, 12.5f, L"", &g_tfCtlI);
     if (g_tfCtlI) { g_tfCtlI->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER); g_tfCtlI->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER); }
     g_tfRuler = Fmt(9.5f);
     barWanted = 32;  // macOS 27: a barra de título é do app (o nome à esquerda, com o ícone)

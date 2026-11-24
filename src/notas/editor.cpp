@@ -3,6 +3,7 @@
 // listas (marcadores, traços, números, verificação com bolinhas), seções recolhíveis nos títulos,
 // desfazer/refazer e área de transferência com formatação (formato próprio + texto puro).
 #include "notas.h"
+#include "../comum/fonte_cjk.h" // a reserva para coreano, japonês e chinês
 #include <cwctype>
 #include <algorithm>
 #include <cmath>
@@ -429,7 +430,7 @@ void SetFormats(const std::wstring& fam, const std::wstring& mono) {
     family = fam; monoFamily = mono;
     for (int s = 0; s < 5; s++) {
         if (fmt[s]) fmt[s]->Release();
-        gfx::dw->CreateTextFormat(s == S_MONO ? monoFamily.c_str() : family.c_str(), nullptr, SM[s].w, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, SM[s].size, L"pt-br", &fmt[s]);
+        cjk::Format(gfx::dw, s == S_MONO ? monoFamily.c_str() : family.c_str(), nullptr, SM[s].w, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, SM[s].size, L"pt-br", &fmt[s]);
         if (fmt[s]) fmt[s]->SetWordWrapping(DWRITE_WORD_WRAPPING_WRAP);
     }
     ReleaseLayouts();
@@ -516,8 +517,8 @@ void DrawFile(ID2D1DeviceContext* dc, ID2D1SolidColorBrush* br, const Para& p, c
         std::wstring ext = name.substr(name.find_last_of(L'.') + 1);
         if (ext.size() < name.size() && ext.size() <= 5) { for (auto& c : ext) c = towupper(c); info = ext + L" · " + info; }
         IDWriteTextFormat *t1 = nullptr, *t2 = nullptr;
-        gfx::dw->CreateTextFormat(family.c_str(), nullptr, DWRITE_FONT_WEIGHT_SEMI_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 13, L"pt-br", &t1);
-        gfx::dw->CreateTextFormat(family.c_str(), nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 11, L"pt-br", &t2);
+        cjk::Format(gfx::dw, family.c_str(), nullptr, DWRITE_FONT_WEIGHT_SEMI_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 13, L"pt-br", &t1);
+        cjk::Format(gfx::dw, family.c_str(), nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 11, L"pt-br", &t2);
         DWRITE_TRIMMING tr{ DWRITE_TRIMMING_GRANULARITY_CHARACTER, 0, 0 };
         if (t1) { t1->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP); t1->SetTrimming(&tr, nullptr); br->SetColor(TextColor()); dc->DrawTextW(name.c_str(), (UINT32)name.size(), t1, D2D1::RectF(r.left + 48, r.top + 9, r.right - 10, r.top + 27), br); t1->Release(); }
         if (t2) { br->SetColor(Text2()); dc->DrawTextW(info.c_str(), (UINT32)info.size(), t2, D2D1::RectF(r.left + 48, r.top + 28, r.right - 10, r.top + 44), br); t2->Release(); }
@@ -556,7 +557,7 @@ void Draw(ID2D1DeviceContext* dc, D2D1_RECT_F a) {
     {
         std::wstring d = LongDate(N->modified);
         IDWriteTextFormat* tf = nullptr;
-        gfx::dw->CreateTextFormat(family.c_str(), nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 12, L"pt-br", &tf);
+        cjk::Format(gfx::dw, family.c_str(), nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 12, L"pt-br", &tf);
         if (tf) {
             tf->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
             br->SetColor(Text2());

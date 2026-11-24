@@ -1,6 +1,7 @@
 // Desenho comum do shell: Direct2D numa DIB de 32 bits (como o menu de contexto), acrílico,
 // fontes e os ícones próprios (pasta azul do Arquivos, lixeira).
 #include "shell.h"
+#include "../comum/fonte_cjk.h" // a reserva para coreano, japonês e chinês
 #include <shlobj.h>
 #include <shobjidl.h>
 #include <wincodec.h>
@@ -45,7 +46,7 @@ bool ui::Init() {
         for (const std::wstring& f : { fam, ic, std::wstring(L"SF Pro Display"), std::wstring(L"SF Pro Rounded"), std::wstring(L"Segoe UI") })
             for (DWRITE_FONT_WEIGHT w : { DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_WEIGHT_MEDIUM, DWRITE_FONT_WEIGHT_SEMI_BOLD, DWRITE_FONT_WEIGHT_BOLD }) {
                 IDWriteTextFormat* tf = nullptr;
-                if (FAILED(dw->CreateTextFormat(f.c_str(), nullptr, w, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 13, L"", &tf)) || !tf) continue;
+                if (FAILED(cjk::Format(dw, f.c_str(), nullptr, w, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 13, L"", &tf)) || !tf) continue;
                 IDWriteTextLayout* tl = nullptr;
                 const wchar_t txt[] = L"Ag 0123 \xE7B8\xE8C8\xE73E\xE7C3";
                 if (SUCCEEDED(dw->CreateTextLayout(txt, (UINT32)wcslen(txt), tf, 400, 40, &tl)) && tl) {
@@ -722,7 +723,7 @@ void ui::Acrylic(HWND h, DWORD tint) {
 
 IDWriteTextFormat* ui::Format(float size, DWRITE_FONT_WEIGHT w, bool icons, DWRITE_TEXT_ALIGNMENT a) {
     IDWriteTextFormat* tf = nullptr;
-    dw->CreateTextFormat((icons ? iconFamily : family).c_str(), nullptr, w, DWRITE_FONT_STYLE_NORMAL,
+    cjk::Format(dw, (icons ? iconFamily : family).c_str(), nullptr, w, DWRITE_FONT_STYLE_NORMAL,
                          DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf);
     tf->SetTextAlignment(a);
     tf->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
@@ -732,7 +733,7 @@ IDWriteTextFormat* ui::Format(float size, DWRITE_FONT_WEIGHT w, bool icons, DWRI
 
 IDWriteTextFormat* ui::FormatFace(const wchar_t* face, float size, DWRITE_FONT_WEIGHT w) {
     IDWriteTextFormat* tf = nullptr;
-    if (FAILED(dw->CreateTextFormat(face, nullptr, w, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf)) || !tf)
+    if (FAILED(cjk::Format(dw, face, nullptr, w, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf)) || !tf)
         return Format(size, w);
     tf->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
     tf->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);

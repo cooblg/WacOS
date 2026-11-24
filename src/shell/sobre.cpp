@@ -5,6 +5,7 @@
 // (rótulos alinhados à direita), botão "Mais Informações…" e o rodapé de direitos.
 // Vidro desfocado atrás (backdrop.cpp), como as outras janelas do Shell.
 #include "shell.h"
+#include "../comum/fonte_cjk.h" // a reserva para coreano, japonês e chinês
 #include <dwmapi.h>
 #include <algorithm>
 #include <cmath>
@@ -151,7 +152,7 @@ void Text(ID2D1DeviceContext* dc, ID2D1SolidColorBrush* br, const std::wstring& 
           DWRITE_TEXT_ALIGNMENT al, D2D1_RECT_F r, D2D1_COLOR_F c, bool underline = false, bool display = false) {
     IDWriteTextFormat* tf = nullptr;
     if (display) {  // nome grande: SF Pro Display (mais justa que a Text nos tamanhos grandes)
-        if (SUCCEEDED(ui::dw->CreateTextFormat(L"SF Pro Display", nullptr, wgt, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf)))
+        if (SUCCEEDED(cjk::Format(ui::dw, L"SF Pro Display", nullptr, wgt, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf)))
             tf->SetTextAlignment(al);
     } else tf = ui::Format(size, wgt, false, al);
     if (!tf) return;

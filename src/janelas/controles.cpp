@@ -9,6 +9,7 @@
 #define NOMINMAX
 #define SEMAFORO_SEM_ESPERA  // antes dos includes, igual nos dois .cpp da DLL (semaforo.h)
 #include <windows.h>
+#include "../comum/fonte_cjk.h" // a reserva para coreano, japonês e chinês
 #include <windowsx.h>
 #include <commctrl.h>
 #include <uxtheme.h>
@@ -168,7 +169,7 @@ struct Canvas {
               DWRITE_FONT_WEIGHT w = DWRITE_FONT_WEIGHT_NORMAL, bool wrap = false) {
         if (!g_dw || s.empty()) return;
         IDWriteTextFormat* tf = nullptr;
-        if (FAILED(g_dw->CreateTextFormat(g_face.c_str(), nullptr, w, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf))) return;
+        if (FAILED(cjk::Format(g_dw, g_face.c_str(), nullptr, w, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf))) return;
         if (!wrap) {  // a SF Pro é mais larga que a fonte do Windows: encolhe até 85% para caber no controle
             IDWriteTextLayout* lay = nullptr;
             if (SUCCEEDED(g_dw->CreateTextLayout(s.c_str(), (UINT32)s.size(), tf, 10000, 1000, &lay))) {
@@ -177,7 +178,7 @@ struct Canvas {
                 if (m.widthIncludingTrailingWhitespace > avail && avail > 0) {
                     float k = std::max(0.85f, avail / m.widthIncludingTrailingWhitespace);
                     tf->Release(); tf = nullptr;
-                    if (FAILED(g_dw->CreateTextFormat(g_face.c_str(), nullptr, w, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size * k, L"pt-br", &tf))) return;
+                    if (FAILED(cjk::Format(g_dw, g_face.c_str(), nullptr, w, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size * k, L"pt-br", &tf))) return;
                 }
             }
         }
@@ -369,7 +370,7 @@ void PaintTab(HWND h, HDC dc) {
         names[i] = t;
         // largura aproximada pelo DirectWrite
         IDWriteTextFormat* tf = nullptr; IDWriteTextLayout* lay = nullptr; float w = 40 * s;
-        if (g_dw && SUCCEEDED(g_dw->CreateTextFormat(g_face.c_str(), nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, fs, L"pt-br", &tf))) {
+        if (g_dw && SUCCEEDED(cjk::Format(g_dw, g_face.c_str(), nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, fs, L"pt-br", &tf))) {
             if (SUCCEEDED(g_dw->CreateTextLayout(t.c_str(), (UINT32)t.size(), tf, 2000, 100, &lay))) { DWRITE_TEXT_METRICS m; lay->GetMetrics(&m); w = m.widthIncludingTrailingWhitespace; lay->Release(); }
             tf->Release();
         }
@@ -536,7 +537,7 @@ void PaintGroups(HWND dlg, HDC dc) {
         if (!t.empty()) {
             float tw = 0;
             IDWriteTextFormat* tf = nullptr; IDWriteTextLayout* lay = nullptr;
-            if (g_dw && SUCCEEDED(g_dw->CreateTextFormat(g_face.c_str(), nullptr, DWRITE_FONT_WEIGHT_SEMI_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, fs * 0.92f, L"pt-br", &tf))) {
+            if (g_dw && SUCCEEDED(cjk::Format(g_dw, g_face.c_str(), nullptr, DWRITE_FONT_WEIGHT_SEMI_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, fs * 0.92f, L"pt-br", &tf))) {
                 if (SUCCEEDED(g_dw->CreateTextLayout(t.c_str(), (UINT32)t.size(), tf, 2000, 100, &lay))) { DWRITE_TEXT_METRICS m; lay->GetMetrics(&m); tw = m.width; lay->Release(); }
                 tf->Release();
             }
@@ -601,7 +602,7 @@ const float LW = 420, LTX = 104, LTOP = 15, LBTN = 21;
 float TextWidthD(const std::wstring& s, float size) {
     if (s.empty() || !g_dw) return 0;
     IDWriteTextFormat* tf = nullptr; IDWriteTextLayout* lay = nullptr; float w = 0;
-    if (SUCCEEDED(g_dw->CreateTextFormat(g_face.c_str(), nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf))) {
+    if (SUCCEEDED(cjk::Format(g_dw, g_face.c_str(), nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf))) {
         if (SUCCEEDED(g_dw->CreateTextLayout(s.c_str(), (UINT32)s.size(), tf, 4000, 400, &lay))) { DWRITE_TEXT_METRICS m; lay->GetMetrics(&m); w = m.widthIncludingTrailingWhitespace; lay->Release(); }
         tf->Release();
     }
@@ -628,7 +629,7 @@ bool IsMessageBox(HWND dlg) {
 float TextHeight(const std::wstring& s, float size, DWRITE_FONT_WEIGHT w, float width) {
     if (s.empty() || !g_dw) return 0;
     IDWriteTextFormat* tf = nullptr; IDWriteTextLayout* lay = nullptr; float h = 0;
-    if (SUCCEEDED(g_dw->CreateTextFormat(g_face.c_str(), nullptr, w, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf))) {
+    if (SUCCEEDED(cjk::Format(g_dw, g_face.c_str(), nullptr, w, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf))) {
         tf->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
         if (SUCCEEDED(g_dw->CreateTextLayout(s.c_str(), (UINT32)s.size(), tf, width, 4000, &lay))) { DWRITE_TEXT_METRICS m; lay->GetMetrics(&m); h = m.height; lay->Release(); }
         tf->Release();

@@ -11,6 +11,7 @@
 // processo é Per-Monitor V2): DPI alto e vários monitores saem certos.
 #define NOMINMAX
 #include <windows.h>
+#include "../comum/fonte_cjk.h" // a reserva para coreano, japonês e chinês
 #include <windowsx.h>
 #include <unknwn.h>
 #include <d2d1.h>
@@ -507,7 +508,7 @@ static IDWriteTextFormat* Fmt(float px, DWRITE_FONT_WEIGHT wt = DWRITE_FONT_WEIG
     auto it = cache.find(key);
     if (it != cache.end()) return it->second;
     IDWriteTextFormat* f = nullptr;
-    g_dw->CreateTextFormat(g_family.c_str(), nullptr, wt, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, px, idioma::Locale(), &f);
+    cjk::Format(g_dw, g_family.c_str(), nullptr, wt, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, px, idioma::Locale(), &f);
     if (f) { f->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP); f->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER); }
     cache[key] = f;
     return f;

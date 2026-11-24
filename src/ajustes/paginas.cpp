@@ -1,6 +1,7 @@
 ﻿// As páginas do Ajustes do Sistema, na ordem e com os nomes do macOS Sequoia (pt-BR). Cada uma
 // mostra e muda o equivalente do Windows; o que não tem como ser feito aqui abre a página do Windows.
 #include "ajustes.h"
+#include "../comum/fonte_cjk.h" // a reserva para coreano, japonês e chinês
 #include <set>
 #include <mutex>
 #include <thread>
@@ -99,7 +100,7 @@ Row Buttons(std::vector<std::pair<std::wstring, std::function<void()>>> bs) {
             float w = 0;
             IDWriteTextLayout* tl = nullptr;
             IDWriteTextFormat* tf = nullptr;
-            gfx::dw->CreateTextFormat(L"SF Pro Text", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 13, L"pt-br", &tf);
+            cjk::Format(gfx::dw, L"SF Pro Text", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 13, L"pt-br", &tf);
             if (tf && SUCCEEDED(gfx::dw->CreateTextLayout(bs[i].first.c_str(), (UINT32)bs[i].first.size(), tf, 400, 30, &tl))) { DWRITE_TEXT_METRICS m{}; tl->GetMetrics(&m); w = m.width; tl->Release(); }
             if (tf) tf->Release();
             w = std::max(w + (tahoe::On() ? 28 : 22), 60.f);
@@ -118,7 +119,7 @@ Row Hero(wchar_t glyph, UINT32 color, const std::wstring& title, const std::wstr
         float cx = (rr.left + rr.right) / 2;
         Tile(c, D2D1::RectF(cx - 24, rr.top + 14, cx + 24, rr.top + 62), glyph, color, SymbolFor(title));
         IDWriteTextFormat* tf = nullptr;
-        gfx::dw->CreateTextFormat(L"SF Pro Display", nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 15, L"pt-br", &tf);
+        cjk::Format(gfx::dw, L"SF Pro Display", nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 15, L"pt-br", &tf);
         if (tf) { tf->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER); Text(c, title, D2D1::RectF(rr.left + 10, rr.top + 66, rr.right - 10, rr.top + 86), tf, c.text); tf->Release(); }
         c.note->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
         c.note->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
@@ -162,7 +163,7 @@ Page Conta() {
             c.dc->FillEllipse(D2D1::Ellipse(m, 40, 40), c.br);
         }
         IDWriteTextFormat* tf = nullptr;
-        gfx::dw->CreateTextFormat(L"SF Pro Display", nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 20, L"pt-br", &tf);
+        cjk::Format(gfx::dw, L"SF Pro Display", nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 20, L"pt-br", &tf);
         if (tf) { tf->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER); Text(c, inf.fullName, D2D1::RectF(rr.left, rr.top + 100, rr.right, rr.top + 126), tf, c.text); tf->Release(); }
         c.note->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
         Text(c, inf.user + L" · " + inf.computer, D2D1::RectF(rr.left, rr.top + 126, rr.right, rr.top + 144), c.note, c.text2);
@@ -357,7 +358,7 @@ Page Sobre() {
         c.dc->FillRectangle(D2D1::RectF(cx - 8, scr.bottom, cx + 8, scr.bottom + 12), c.br);
         c.dc->FillRoundedRectangle(D2D1::RoundedRect(D2D1::RectF(cx - 24, scr.bottom + 11, cx + 24, scr.bottom + 15), 2, 2), c.br);
         IDWriteTextFormat* tf = nullptr;
-        gfx::dw->CreateTextFormat(L"SF Pro Display", nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 20, L"pt-br", &tf);
+        cjk::Format(gfx::dw, L"SF Pro Display", nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 20, L"pt-br", &tf);
         if (tf) { tf->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER); Text(c, model, D2D1::RectF(rr.left, rr.top + 102, rr.right, rr.top + 128), tf, c.text); tf->Release(); }
     };
     p.groups.push_back(Plain(head));
@@ -649,7 +650,7 @@ Page Geral() {
             Tile(c, D2D1::RectF(cx - 25, rr.top + 25, cx + 25, rr.top + 75), 0xE713, C_GRAY, L"gearshape.fill");
             static IDWriteTextFormat* tfBig = nullptr;
             if (!tfBig) { IDWriteFactory* dw = nullptr; DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), (IUnknown**)&dw);
-                if (dw) { dw->CreateTextFormat(L"SF Pro Display", nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 22, L"", &tfBig); dw->Release(); }
+                if (dw) { cjk::Format(dw, L"SF Pro Display", nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 22, L"", &tfBig); dw->Release(); }
                 if (tfBig) { tfBig->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER); tfBig->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER); } }
             if (tfBig) Text(c, L"Geral", D2D1::RectF(rr.left, rr.top + 85, rr.right, rr.top + 113), tfBig, c.text);
             DWRITE_WORD_WRAPPING ww = c.noteCenter->GetWordWrapping();

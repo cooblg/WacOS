@@ -7,6 +7,7 @@
 //  4. O teclado continua indo para o menu nativo; acompanhamos o destaque pelo evento de foco.
 // Programas que desenham o próprio menu (Chrome, Electron, WinUI) não usam #32768 e ficam como estão.
 #include "shell.h"
+#include "../comum/fonte_cjk.h" // a reserva para coreano, japonês e chinês
 #include "../menu/context_menu.h"
 #include <dwmapi.h>
 #include <dcomp.h>
@@ -129,7 +130,7 @@ void Formats(float scale) {
     if (!g_tfIcon) {
         IDWriteFactory* dw = nullptr;
         if (SUCCEEDED(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), (IUnknown**)&dw))) {
-            dw->CreateTextFormat(L"Segoe Fluent Icons", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 13, L"", &g_tfIcon);
+            cjk::Format(dw, L"Segoe Fluent Icons", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 13, L"", &g_tfIcon);
             if (g_tfIcon) { g_tfIcon->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER); g_tfIcon->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER); }
             dw->Release();
         }

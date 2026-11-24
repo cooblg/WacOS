@@ -7,6 +7,7 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <winsock2.h>
+#include "../comum/fonte_cjk.h" // a reserva para coreano, japonês e chinês
 #include <ws2tcpip.h>
 #include <windows.h>
 #include <windowsx.h>
@@ -604,7 +605,7 @@ Pal ColorsBase() {
 
 IDWriteTextFormat* Fmt(float size, DWRITE_FONT_WEIGHT w, DWRITE_TEXT_ALIGNMENT a = DWRITE_TEXT_ALIGNMENT_LEADING) {
     IDWriteTextFormat* tf = nullptr;
-    if (FAILED(g_dw->CreateTextFormat(g_family.c_str(), nullptr, w, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf))) return nullptr;
+    if (FAILED(cjk::Format(g_dw, g_family.c_str(), nullptr, w, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf))) return nullptr;
     tf->SetTextAlignment(a);
     tf->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
     tf->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);
@@ -801,7 +802,7 @@ void DrawToolbarLeopard(ID2D1RenderTarget* rt, ID2D1SolidColorBrush* br, const P
     DrawLights(rt, br);
     static IDWriteTextFormat* tt = [] {
         IDWriteTextFormat* f = nullptr;
-        g_dw->CreateTextFormat(L"Lucida Sans Unicode", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 13, L"pt-br", &f);
+        cjk::Format(g_dw, L"Lucida Sans Unicode", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 13, L"pt-br", &f);
         if (f) { f->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER); f->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER); f->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP); }
         return f;
     }();
@@ -850,7 +851,7 @@ void DrawToolbarLeopard(ID2D1RenderTarget* rt, ID2D1SolidColorBrush* br, const P
     }
     static IDWriteTextFormat* ts = [] {
         IDWriteTextFormat* f = nullptr;
-        g_dw->CreateTextFormat(L"Lucida Sans Unicode", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 12, L"pt-br", &f);
+        cjk::Format(g_dw, L"Lucida Sans Unicode", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 12, L"pt-br", &f);
         if (f) { f->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER); f->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER); f->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP); }
         return f;
     }();

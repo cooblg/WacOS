@@ -9,6 +9,7 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
+#include "../comum/fonte_cjk.h" // a reserva para coreano, japonês e chinês
 #include <windowsx.h>
 #include <shellapi.h>
 #include <shobjidl.h>
@@ -431,8 +432,8 @@ void DrawAnn(ID2D1RenderTarget* rt, const Ann& a, D2D1_RECT_F r, float z) {
     }
     if (a.tool == T_TEXT && !a.text.empty()) {
         IDWriteTextFormat* f = nullptr;
-        g_dw->CreateTextFormat(L"Helvetica", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, std::max(1.f, 18 * z), L"", &f);
-        if (!f) g_dw->CreateTextFormat(L"Arial", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, std::max(1.f, 18 * z), L"", &f);
+        cjk::Format(g_dw, L"Helvetica", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, std::max(1.f, 18 * z), L"", &f);
+        if (!f) cjk::Format(g_dw, L"Arial", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, std::max(1.f, 18 * z), L"", &f);
         if (f) { D2D1_POINT_2F p = P(a.pts[0]); rt->DrawTextW(a.text.c_str(), (UINT32)a.text.size(), f, D2D1::RectF(p.x, p.y, p.x + 4000, p.y + 400), b); f->Release(); }
     }
     if (round) round->Release();
@@ -1044,7 +1045,7 @@ LRESULT CALLBACK Proc(HWND h, UINT m, WPARAM w, LPARAM l) {
 
 IDWriteTextFormat* Fmt(const wchar_t* fam, float size, DWRITE_FONT_WEIGHT wt, DWRITE_TEXT_ALIGNMENT a, DWRITE_PARAGRAPH_ALIGNMENT pa) {
     IDWriteTextFormat* f = nullptr;
-    g_dw->CreateTextFormat(fam, nullptr, wt, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"", &f);
+    cjk::Format(g_dw, fam, nullptr, wt, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"", &f);
     if (f) { f->SetTextAlignment(a); f->SetParagraphAlignment(pa); f->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP); }
     return f;
 }

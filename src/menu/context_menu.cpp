@@ -3,6 +3,7 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
+#include "../comum/fonte_cjk.h" // a reserva para coreano, japonês e chinês
 #include <windowsx.h>
 #include <shlobj.h>
 #include <shlwapi.h>
@@ -775,7 +776,7 @@ static float TextWidth(IDWriteTextFormat* tf, const std::wstring& s) {
 
 static IDWriteTextFormat* MakeFormat(float size, DWRITE_FONT_WEIGHT w) {
     IDWriteTextFormat* tf = nullptr;
-    g_dw->CreateTextFormat(g_font.c_str(), nullptr, w, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf);
+    cjk::Format(g_dw, g_font.c_str(), nullptr, w, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf);
     tf->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);
     tf->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
     IDWriteInlineObject* ell = nullptr;
@@ -860,7 +861,7 @@ static void OpenLevel(Session& s, std::vector<MItem>* items, POINT anchor, const
     }
     if (maxShort > 0) maxW += maxShort + 28 * sc;  // atalhos alinhados à direita, como na barra de menus do Mac
     if (hasIcon) {  // ícones do Tahoe: coluna de ícones à esquerda, texto depois dela
-        g_dw->CreateTextFormat(L"Segoe Fluent Icons", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 13 * sc, L"", &L.tfIcon);
+        cjk::Format(g_dw, L"Segoe Fluent Icons", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 13 * sc, L"", &L.tfIcon);
         if (L.tfIcon) { L.tfIcon->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER); L.tfIcon->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER); }
     }
     L.textL = (hasIcon ? (Golden() ? 41.f : Tahoe() ? 33.f : ICON_TEXT_L) : hasCheck ? 26.f : Golden() ? 16.f : Tahoe() ? 14.f : 16.f) * sc;

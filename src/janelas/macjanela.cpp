@@ -8,6 +8,7 @@
 #define NOMINMAX
 #define SEMAFORO_SEM_ESPERA  // antes dos includes, igual nos dois .cpp da DLL (semaforo.h)
 #include <windows.h>
+#include "../comum/fonte_cjk.h" // a reserva para coreano, japonês e chinês
 #include <commctrl.h>
 #include <uxtheme.h>
 #include <dwmapi.h>
@@ -2685,8 +2686,8 @@ void Attach(HWND h, int mode) {
                 if (ok) { fam = n; break; }
             }
             if (fc) fc->Release();
-            g_dw->CreateTextFormat(fam, nullptr, DWRITE_FONT_WEIGHT_SEMI_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 13, L"pt-br", &g_tf);
-            if (g_dw->CreateTextFormat(L"Lucida Sans Unicode", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 13, L"pt-br", &g_tfLeo) == S_OK && g_tfLeo) {
+            cjk::Format(g_dw, fam, nullptr, DWRITE_FONT_WEIGHT_SEMI_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 13, L"pt-br", &g_tf);
+            if (cjk::Format(g_dw, L"Lucida Sans Unicode", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 13, L"pt-br", &g_tfLeo) == S_OK && g_tfLeo) {
                 g_tfLeo->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
                 g_tfLeo->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
                 g_tfLeo->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);
@@ -2701,7 +2702,7 @@ void Attach(HWND h, int mode) {
                 g_tf->SetTrimming(&tr, ell);
                 if (ell) ell->Release();
             }
-            g_dw->CreateTextFormat(fam, nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 12, L"pt-br", &g_tfTool);
+            cjk::Format(g_dw, fam, nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 12, L"pt-br", &g_tfTool);
             if (g_tfTool) {
                 g_tfTool->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
                 g_tfTool->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);

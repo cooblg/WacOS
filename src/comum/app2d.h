@@ -6,6 +6,7 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
+#include "fonte_cjk.h" // a reserva para coreano, japonês e chinês
 #include <windowsx.h>
 #include <d2d1.h>
 #include <dwrite.h>
@@ -80,7 +81,7 @@ inline float Sc() { return GetDpiForWindow(wnd) / 96.f; }
 inline IDWriteTextFormat* Fmt(float size, DWRITE_FONT_WEIGHT w = DWRITE_FONT_WEIGHT_NORMAL, DWRITE_TEXT_ALIGNMENT a = DWRITE_TEXT_ALIGNMENT_LEADING,
                               bool wrap = false, const wchar_t* fam = nullptr) {
     IDWriteTextFormat* f = nullptr;
-    dw->CreateTextFormat(fam ? fam : family.c_str(), nullptr, w, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"", &f);
+    cjk::Format(dw, fam ? fam : family.c_str(), nullptr, w, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"", &f);
     if (!f) return nullptr;
     f->SetTextAlignment(a);
     f->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);

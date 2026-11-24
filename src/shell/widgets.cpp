@@ -6,6 +6,7 @@
 // O tempo vem do Open-Meteo (sem chave), a cada 15 min, para a cidade em ajustes.txt (padrão: a do fuso do Windows, comum/cidade_padrao.h);
 // a última resposta fica em %APPDATA%\Shell\tempo.json para aparecer já ao ligar.
 #include "shell.h"
+#include "../comum/fonte_cjk.h" // a reserva para coreano, japonês e chinês
 #include "../comum/cidade_padrao.h"
 #include "../menu/context_menu.h"
 #include <dwmapi.h>
@@ -218,7 +219,7 @@ const D2D1_COLOR_F WHITE = { 1, 1, 1, 1 }, ORANGE = { 1, 0.584f, 0, 1 }, RED = {
 void Txt(ID2D1DeviceContext* dc, ID2D1SolidColorBrush* br, const std::wstring& s, float size, DWRITE_FONT_WEIGHT wgt,
          DWRITE_TEXT_ALIGNMENT al, D2D1_RECT_F r, D2D1_COLOR_F c, bool display = false) {
     IDWriteTextFormat* tf = nullptr;
-    if (FAILED(ui::dw->CreateTextFormat(display ? L"SF Pro Display" : ui::family.c_str(), nullptr, wgt, DWRITE_FONT_STYLE_NORMAL,
+    if (FAILED(cjk::Format(ui::dw, display ? L"SF Pro Display" : ui::family.c_str(), nullptr, wgt, DWRITE_FONT_STYLE_NORMAL,
                                         DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf)) || !tf) return;
     tf->SetTextAlignment(al);
     tf->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
@@ -229,7 +230,7 @@ void Txt(ID2D1DeviceContext* dc, ID2D1SolidColorBrush* br, const std::wstring& s
 }
 float Width(const std::wstring& s, float size, DWRITE_FONT_WEIGHT wgt, bool display = false) {
     IDWriteTextFormat* tf = nullptr;
-    if (FAILED(ui::dw->CreateTextFormat(display ? L"SF Pro Display" : ui::family.c_str(), nullptr, wgt, DWRITE_FONT_STYLE_NORMAL,
+    if (FAILED(cjk::Format(ui::dw, display ? L"SF Pro Display" : ui::family.c_str(), nullptr, wgt, DWRITE_FONT_STYLE_NORMAL,
                                         DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf)) || !tf) return 0;
     float w = ui::TextWidth(tf, s);
     tf->Release();

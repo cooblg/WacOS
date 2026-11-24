@@ -16,6 +16,7 @@
 //  - erros do LogonUserW que não são "senha errada" aceitam e ficam no shell.log;
 //  - depois de 3 erros a tela espera antes de tentar de novo, para não disparar o bloqueio de conta do Windows.
 #include "shell.h"
+#include "../comum/fonte_cjk.h" // a reserva para coreano, japonês e chinês
 #include <d2d1effects.h>
 #include <wincodec.h>
 #include <sddl.h>
@@ -193,8 +194,8 @@ void LoadUser() {
 // ---- texto
 IDWriteTextLayout* Lay(const std::wstring& s, const wchar_t* fam, float size, DWRITE_FONT_WEIGHT wt, float boxW, bool wrap = false) {
     IDWriteTextFormat* tf = nullptr;
-    if (FAILED(ui::dw->CreateTextFormat(fam, nullptr, wt, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf)) &&
-        FAILED(ui::dw->CreateTextFormat(ui::family.c_str(), nullptr, wt, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf)))
+    if (FAILED(cjk::Format(ui::dw, fam, nullptr, wt, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf)) &&
+        FAILED(cjk::Format(ui::dw, ui::family.c_str(), nullptr, wt, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf)))
         return nullptr;
     tf->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
     tf->SetWordWrapping(wrap ? DWRITE_WORD_WRAPPING_WRAP : DWRITE_WORD_WRAPPING_NO_WRAP);

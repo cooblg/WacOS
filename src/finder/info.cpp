@@ -7,6 +7,7 @@
 // a senha de administrador (UAC) e reabre a janela como administrador, onde cada privilégio pode ser
 // trocado (Leitura e Gravação, Somente Leitura, Somente Gravação, Sem Acesso), como no Mac.
 #include "finder.h"
+#include "../comum/fonte_cjk.h" // a reserva para coreano, japonês e chinês
 #include "../menu/context_menu.h"
 #include <aclapi.h>
 #include <sddl.h>
@@ -81,7 +82,7 @@ std::wstring g_packDir;
 
 IDWriteTextFormat* Fmt(float size, DWRITE_FONT_WEIGHT w, DWRITE_TEXT_ALIGNMENT a = DWRITE_TEXT_ALIGNMENT_LEADING) {
     IDWriteTextFormat* tf = nullptr;
-    if (FAILED(gfx::dw->CreateTextFormat(g_family.c_str(), nullptr, w, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf))) return nullptr;
+    if (FAILED(cjk::Format(gfx::dw, g_family.c_str(), nullptr, w, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf))) return nullptr;
     tf->SetTextAlignment(a);
     tf->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
     return tf;

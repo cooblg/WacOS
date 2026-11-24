@@ -10,6 +10,7 @@
 // conteúdo por cima (Direct2D na GPU). O Windows não avisa quando chega notificação para app sem pacote
 // (NotificationChanged dá "Elemento não encontrado"), então uma thread relê a lista a cada 2 s com o painel aberto.
 #include "shell.h"
+#include "../comum/fonte_cjk.h" // a reserva para coreano, japonês e chinês
 #include "../comum/ajustes_arquivo.h"
 #include "vidro_wuc.h"
 #include "../menu/context_menu.h"
@@ -442,7 +443,7 @@ std::wstring When(long long ft) {
 
 IDWriteTextFormat* Fmt(float size, DWRITE_FONT_WEIGHT w, const wchar_t* family = nullptr, bool wrap = false) {
     IDWriteTextFormat* tf = nullptr;
-    if (family) ui::dw->CreateTextFormat(family, nullptr, w, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf);
+    if (family) cjk::Format(ui::dw, family, nullptr, w, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf);
     if (!tf) tf = ui::Format(size, w);
     if (!tf) return nullptr;
     tf->SetWordWrapping(wrap ? DWRITE_WORD_WRAPPING_WRAP : DWRITE_WORD_WRAPPING_NO_WRAP);

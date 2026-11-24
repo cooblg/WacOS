@@ -5,6 +5,7 @@
 //   Arquivos.exe [pasta]
 
 #include "finder.h"
+#include "../comum/fonte_cjk.h" // a reserva para coreano, japonês e chinês
 #include <d2d1effects.h>  // Leopard: a perspectiva 3D do Cover Flow
 #pragma comment(lib, "dxguid.lib")
 #include <windowsx.h>
@@ -2233,7 +2234,7 @@ static void DrawFolder(ID2D1DeviceContext* dc, D2D1_RECT_F box, wchar_t emblem, 
         if (!g_tfEmblem || g_tfEmblemSize != size) {
             if (g_tfEmblem) g_tfEmblem->Release();
             IDWriteTextFormat* tf = nullptr;
-            gfx::dw->CreateTextFormat(g_iconFamily.c_str(), nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
+            cjk::Format(gfx::dw, g_iconFamily.c_str(), nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
                                       DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf);
             tf->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
             tf->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
@@ -2348,7 +2349,7 @@ static void DrawDocument(ID2D1DeviceContext* dc, D2D1_RECT_F box, const std::wst
     float size = std::round(std::max(6.f, 0.15f * S));
     if (!g_tfDocExt || g_tfDocExtSize != size) {
         if (g_tfDocExt) g_tfDocExt->Release();
-        gfx::dw->CreateTextFormat(g_uiFamily.c_str(), nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &g_tfDocExt);
+        cjk::Format(gfx::dw, g_uiFamily.c_str(), nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &g_tfDocExt);
         g_tfDocExt->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
         g_tfDocExt->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
         g_tfDocExtSize = size;
@@ -2359,7 +2360,7 @@ static void DrawDocument(ID2D1DeviceContext* dc, D2D1_RECT_F box, const std::wst
         float gs = std::round(0.34f * S);
         if (!tfGlyph || tfGlyphSize != gs) {
             if (tfGlyph) tfGlyph->Release();
-            gfx::dw->CreateTextFormat(g_iconFamily.c_str(), nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, gs, L"pt-br", &tfGlyph);
+            cjk::Format(gfx::dw, g_iconFamily.c_str(), nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, gs, L"pt-br", &tfGlyph);
             tfGlyph->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
             tfGlyph->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
             tfGlyphSize = gs;
@@ -2941,7 +2942,7 @@ static void DrawListHeader(ID2D1DeviceContext* dc, const Palette& pal, ID2D1Soli
         dc->DrawLine({ Lay::SIDEBAR_W, bottom - 0.5f }, { s.width, bottom - 0.5f }, br, 1);
         static IDWriteTextFormat* tfH = [] {
             IDWriteTextFormat* f = nullptr;
-            gfx::dw->CreateTextFormat(L"Lucida Sans Unicode", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 11, L"pt-br", &f);
+            cjk::Format(gfx::dw, L"Lucida Sans Unicode", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 11, L"pt-br", &f);
             if (f) { f->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER); f->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP); }
             return f;
         }();
@@ -7113,7 +7114,7 @@ static void MoveFavorite(int from, int to) {  // `to` = posição de inserção 
 static IDWriteTextFormat* Format(const wchar_t* family, float size, DWRITE_FONT_WEIGHT weight,
                                  DWRITE_TEXT_ALIGNMENT align, DWRITE_PARAGRAPH_ALIGNMENT para, bool wrap) {
     IDWriteTextFormat* tf = nullptr;
-    gfx::dw->CreateTextFormat(family, nullptr, weight, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf);
+    cjk::Format(gfx::dw, family, nullptr, weight, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf);
     tf->SetTextAlignment(align);
     tf->SetParagraphAlignment(para);
     tf->SetWordWrapping(wrap ? (DWRITE_WORD_WRAPPING)2 /*EMERGENCY_BREAK*/ : DWRITE_WORD_WRAPPING_NO_WRAP);

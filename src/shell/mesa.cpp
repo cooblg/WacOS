@@ -17,6 +17,7 @@
 // da mesa ou para outra casa da grade), soltar arquivos de fora, F2 renomeia, Delete vai para a Lixeira,
 // Ctrl+C/X/V, menu de contexto (o nosso, com as extensões do Windows) e o menu do fundo do Mac.
 #include "shell.h"
+#include "../comum/fonte_cjk.h" // a reserva para coreano, japonês e chinês
 #include "../comum/ajustes_arquivo.h"
 #include <dwmapi.h>
 #include "../menu/context_menu.h"
@@ -742,7 +743,7 @@ void EnsureFormat() {
     if (g_tf && g_tfScale == s && pt == g_textoPt) return;
     if (g_tf) g_tf->Release();
     g_tf = nullptr; g_tfScale = s; pt = g_textoPt;
-    ui::dw->CreateTextFormat(ui::family.c_str(), nullptr, DWRITE_FONT_WEIGHT_MEDIUM, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL,
+    cjk::Format(ui::dw, ui::family.c_str(), nullptr, DWRITE_FONT_WEIGHT_MEDIUM, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL,
                              g_textoPt * s, L"", &g_tf);
     if (!g_tf) return;
     g_tf->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);

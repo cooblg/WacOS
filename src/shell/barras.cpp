@@ -26,6 +26,7 @@
 // ajustes.txt ou C:\Users\Public\MacTitulo-desligado.txt. Roda numa thread própria (um programa travado
 // não segura o Dock nem a barra de menus).
 #include "shell.h"
+#include "../comum/fonte_cjk.h" // a reserva para coreano, japonês e chinês
 #include <dwmapi.h>
 #include <d2d1.h>
 #include <dwrite.h>
@@ -1197,7 +1198,7 @@ void Fontes() {
         }
         fc->Release();
     }
-    g_dw->CreateTextFormat(fam, nullptr, DWRITE_FONT_WEIGHT_SEMI_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 13, L"pt-br", &g_tf);
+    cjk::Format(g_dw, fam, nullptr, DWRITE_FONT_WEIGHT_SEMI_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 13, L"pt-br", &g_tf);
     if (g_tf) {
         g_tf->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
         g_tf->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);

@@ -8,6 +8,7 @@
 #define NOMINMAX
 #endif
 #include <windows.h>
+#include "fonte_cjk.h" // a reserva para coreano, japonês e chinês
 #include <d2d1.h>
 #include <dwrite.h>
 #include <wincodec.h>
@@ -96,7 +97,7 @@ inline bool Pixels(const std::wstring& name, int px, UINT& w, UINT& h, std::vect
         float mx = (pg.left + pg.right) / 2;
         auto text = [&](const std::wstring& t, const wchar_t* fam, float size, DWRITE_FONT_WEIGHT wt, D2D1_RECT_F box) {
             IDWriteTextFormat* tf = nullptr;
-            if (FAILED(dw->CreateTextFormat(fam, nullptr, wt, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf)) || !tf) return;
+            if (FAILED(cjk::Format(dw, fam, nullptr, wt, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf)) || !tf) return;
             tf->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
             tf->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
             tf->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);

@@ -6,6 +6,7 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
+#include "../comum/fonte_cjk.h" // a reserva para coreano, japonês e chinês
 #include <shlobj.h>
 #include <shlwapi.h>
 #include <d2d1_1.h>
@@ -122,7 +123,7 @@ bool TintedPixels(bool tahoe, int color, std::vector<BYTE>& px, UINT& w, UINT& h
 
 IDWriteTextFormat* EmojiFormat(IDWriteFactory* dw, float size) {
     IDWriteTextFormat* tf = nullptr;
-    dw->CreateTextFormat(L"Segoe UI Emoji", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"", &tf);
+    cjk::Format(dw, L"Segoe UI Emoji", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"", &tf);
     if (tf) { tf->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER); tf->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER); }
     return tf;
 }

@@ -5,6 +5,7 @@
 // (vai para os Ajustes, o mesmo do widget) ou apagar (o "Meu Local" também, se houver outra para ficar no lugar).
 // Cidades em %APPDATA%\Shell\clima.txt.
 #include "../comum/app2d.h"
+#include "../comum/fonte_cjk.h" // a reserva para coreano, japonês e chinês
 #include "../comum/cidade_padrao.h"
 #include <winhttp.h>
 #include <map>
@@ -669,7 +670,7 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE, PWSTR, int show) {
     g_tfCard = Fmt(14, DWRITE_FONT_WEIGHT_MEDIUM, DWRITE_TEXT_ALIGNMENT_CENTER);
     g_tfCardBig = Fmt(18, DWRITE_FONT_WEIGHT_MEDIUM, DWRITE_TEXT_ALIGNMENT_CENTER);
     g_tfRowR = Fmt(16, DWRITE_FONT_WEIGHT_MEDIUM, DWRITE_TEXT_ALIGNMENT_TRAILING);
-    g_tfEmojiSmall = nullptr; dw->CreateTextFormat(L"Segoe UI Emoji", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 20, L"", &g_tfEmojiSmall);
+    g_tfEmojiSmall = nullptr; cjk::Format(dw, L"Segoe UI Emoji", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 20, L"", &g_tfEmojiSmall);
     if (g_tfEmojiSmall) { g_tfEmojiSmall->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER); g_tfEmojiSmall->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER); }
     g_tfSide = Fmt(15, DWRITE_FONT_WEIGHT_SEMI_BOLD);
     g_tfSideTemp = Fmt(30, DWRITE_FONT_WEIGHT_LIGHT, DWRITE_TEXT_ALIGNMENT_TRAILING, false, disp.c_str());

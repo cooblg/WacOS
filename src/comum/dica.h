@@ -6,6 +6,7 @@
 //   no WM_MOUSEMOVE: dica::Quer(hwnd, Tr(L"Fechar"), escuro)   (texto vazio = nenhum botão sob o mouse)
 //   no WM_MOUSELEAVE / clique / fechar: dica::Esconde()
 #include <windows.h>
+#include "fonte_cjk.h" // a reserva para coreano, japonês e chinês
 #include <d2d1.h>
 #include <dwrite.h>
 #include <string>
@@ -40,7 +41,7 @@ inline IDWriteTextFormat* Fonte() {
         for (const wchar_t* f : { L"SF Pro Text", L"Inter" }) { UINT32 i; BOOL ex = FALSE; c->FindFamilyName(f, &i, &ex); if (ex) { fam = f; break; } }
         c->Release();
     }
-    dw->CreateTextFormat(fam, nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 11.5f, L"", &tf);
+    cjk::Format(dw, fam, nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 11.5f, L"", &tf);
     if (tf) { tf->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP); tf->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER); }
     dw->Release();
     return tf;

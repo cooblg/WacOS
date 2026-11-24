@@ -4,6 +4,7 @@
 // tema claro/escuro do sistema. Dados em %APPDATA%\Shell\Notas (grava sozinho enquanto digita).
 //   Notas.exe [--dados=<pasta>] [--captura=<arquivo.png> --escuro|--claro --tamanho=LxA --pasta=<id> --nota=<n> --galeria --aa]
 #include "notas.h"
+#include "../comum/fonte_cjk.h" // a reserva para coreano, japonês e chinês
 #include <windowsx.h>
 #include <dwmapi.h>
 #include <shellapi.h>
@@ -2233,7 +2234,7 @@ std::wstring PickFamily(std::initializer_list<const wchar_t*> names) {
 
 IDWriteTextFormat* Fmt(float size, DWRITE_FONT_WEIGHT w, DWRITE_TEXT_ALIGNMENT a = DWRITE_TEXT_ALIGNMENT_LEADING, const std::wstring& fam = L"") {
     IDWriteTextFormat* tf = nullptr;
-    if (FAILED(gfx::dw->CreateTextFormat((fam.empty() ? g_family : fam).c_str(), nullptr, w, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf))) return nullptr;
+    if (FAILED(cjk::Format(gfx::dw, (fam.empty() ? g_family : fam).c_str(), nullptr, w, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"pt-br", &tf))) return nullptr;
     tf->SetTextAlignment(a);
     tf->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
     tf->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);

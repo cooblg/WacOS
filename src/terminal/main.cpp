@@ -11,6 +11,7 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
+#include "../comum/fonte_cjk.h" // a reserva para coreano, japonês e chinês
 #include <windowsx.h>
 #include <d2d1.h>
 #include <dwrite.h>
@@ -438,7 +439,7 @@ void MakeFonts() {
     g_mono = PickFont({ L"SF Mono", L"Menlo", L"Cascadia Mono", L"Consolas" }, L"Consolas");
     g_ui = PickFont({ L"SF Pro Text", L"Inter", L"Segoe UI Variable Text" }, L"Segoe UI");
     auto mk = [&](const std::wstring& fam, float sz, DWRITE_FONT_WEIGHT w, IDWriteTextFormat** out) {
-        g_dw->CreateTextFormat(fam.c_str(), nullptr, w, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, sz, L"pt-br", out);
+        cjk::Format(g_dw, fam.c_str(), nullptr, w, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, sz, L"pt-br", out);
         (*out)->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);
     };
     mk(g_mono, FONT_PT * 96 / 72.f, DWRITE_FONT_WEIGHT_NORMAL, &g_tfMono);
